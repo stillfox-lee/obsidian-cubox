@@ -6,3 +6,61 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+/* 文件夹选择模态框样式 */
+.folder-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 10px 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.modal-footer button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    background-color: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.modal-footer button.mod-cta {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* 更具体的选择器，针对设置面板中的文本区域 */
+.vertical-tab-content .setting-item:has(.setting-item-name:contains("Content Template")) textarea {
+    min-height: 300px !important;
+    height: 300px !important;
+    width: 100% !important;
+}
+
+.vertical-tab-content .setting-item:has(.setting-item-name:contains("Front Matter")) textarea {
+    min-height: 200px !important;
+    height: 200px !important;
+    width: 100% !important;
+}
+
+/* 备用选择器，直接针对插件设置中的所有文本区域 */
+.plugin-settings-tab textarea {
+    min-height: 150px;
+}
+
+/* 针对特定插件的设置面板 */
+.plugin-settings-tab[data-type="obsidian-cubox-sync"] textarea {
+    min-height: 150px;
+}
+
+/* 最直接的方法：针对所有多行文本输入框 */
+.setting-item-control textarea {
+    min-height: 200px !important;
+}
