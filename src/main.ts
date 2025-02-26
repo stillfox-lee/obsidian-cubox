@@ -3,6 +3,7 @@ import { CuboxApi, CuboxApiOptions } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatISODateTime, getCurrentFormattedTime } from './utils';
 import { FolderSelectModal } from './folderSelectModal';
+import { filenameTemplateInstructions, metadataTemplateInstructions, contentTemplateInstructions } from './templateInstructions';
 
 interface CuboxSyncSettings {
 	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
@@ -397,31 +398,69 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		// 更新文件名模板设置
+		const filenameInstructionsFragment = document.createRange().createContextualFragment(filenameTemplateInstructions);
+
 		new Setting(containerEl)
 			.setName('File Name Template')
-			.setDesc('Enter the file name when the data is stored')
+			.setDesc(filenameInstructionsFragment)
 			.addText(text => text
 				.setPlaceholder('Enter file name template')
 				.setValue(this.plugin.settings.filenameTemplate)
 				.onChange(async (value) => {
 					this.plugin.settings.filenameTemplate = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setIcon('reset')
+				.setTooltip('Reset to default')
+				.onClick(async () => {
+					this.plugin.settings.filenameTemplate = DEFAULT_SETTINGS.filenameTemplate;
+					await this.plugin.saveSettings();
+					this.display(); // 刷新显示
 				}));
+		
+		// 为参考链接添加事件监听器
+		containerEl.querySelectorAll('.reference-link').forEach(el => {
+			el.addEventListener('click', (e) => {
+				e.preventDefault();
+				// 这里可以添加打开参考文档的逻辑
+			});
+		});
+
+		// 更新前置元数据模板设置
+		const metadataInstructionsFragment = document.createRange().createContextualFragment(metadataTemplateInstructions);
 
 		new Setting(containerEl)
-			.setName('Front Matter')
-			.setDesc('Enter the metadata')
+			.setName('Metadata Template')
+			.setDesc(metadataInstructionsFragment)
 			.addTextArea(text => text
 				.setPlaceholder('Enter front matter template')
 				.setValue(this.plugin.settings.frontMatterTemplate)
 				.onChange(async (value) => {
 					this.plugin.settings.frontMatterTemplate = value;
 					await this.plugin.saveSettings();
+				})
+				// 设置文本区域的大小
+				.then(textArea => {
+					textArea.inputEl.rows = 6;
+					textArea.inputEl.cols = 50;
+				}))
+			.addButton(button => button
+				.setIcon('reset')
+				.setTooltip('Reset to default')
+				.onClick(async () => {
+					this.plugin.settings.frontMatterTemplate = DEFAULT_SETTINGS.frontMatterTemplate;
+					await this.plugin.saveSettings();
+					this.display(); // 刷新显示
 				}));
+
+		// 更新内容模板设置
+		const contentInstructionsFragment = document.createRange().createContextualFragment(contentTemplateInstructions);
 
 		new Setting(containerEl)
 			.setName('Content Template')
-			.setDesc('Enter the file name when the data is stored')
+			.setDesc(contentInstructionsFragment)
 			.addTextArea(text => text
 				.setPlaceholder('Enter content template')
 				.setValue(this.plugin.settings.contentTemplate)
@@ -431,29 +470,16 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				})
 				// 设置文本区域的大小
 				.then(textArea => {
-					textArea.inputEl.rows = 8;  // 设置行数
-					textArea.inputEl.cols = 50; // 设置列数
-				}));
-
-		new Setting(containerEl)
-			.setName('Highlight Text in Content')
-			.setDesc('Highlight text in articles')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.highlightInContent)
-				.onChange(async (value) => {
-					this.plugin.settings.highlightInContent = value;
+					textArea.inputEl.rows = 8;
+					textArea.inputEl.cols = 50;
+				}))
+			.addButton(button => button
+				.setIcon('reset')
+				.setTooltip('Reset to default')
+				.onClick(async () => {
+					this.plugin.settings.contentTemplate = DEFAULT_SETTINGS.contentTemplate;
 					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Date Format')
-			.setDesc('Enter the xxxxx, 0 means manual sync')
-			.addText(text => text
-				.setPlaceholder('Enter date format')
-				.setValue(this.plugin.settings.dateFormat)
-				.onChange(async (value) => {
-					this.plugin.settings.dateFormat = value;
-					await this.plugin.saveSettings();
+					this.display(); // 刷新显示
 				}));
 
 		// 状态部分
