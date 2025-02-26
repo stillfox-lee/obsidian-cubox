@@ -36,31 +36,3 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
 }
-
-/* 更具体的选择器，针对设置面板中的文本区域 */
-.vertical-tab-content .setting-item:has(.setting-item-name:contains("Content Template")) textarea {
-    min-height: 300px !important;
-    height: 300px !important;
-    width: 100% !important;
-}
-
-.vertical-tab-content .setting-item:has(.setting-item-name:contains("Front Matter")) textarea {
-    min-height: 200px !important;
-    height: 200px !important;
-    width: 100% !important;
-}
-
-/* 备用选择器，直接针对插件设置中的所有文本区域 */
-.plugin-settings-tab textarea {
-    min-height: 150px;
-}
-
-/* 针对特定插件的设置面板 */
-.plugin-settings-tab[data-type="obsidian-cubox-sync"] textarea {
-    min-height: 150px;
-}
-
-/* 最直接的方法：针对所有多行文本输入框 */
-.setting-item-control textarea {
-    min-height: 200px !important;
-}

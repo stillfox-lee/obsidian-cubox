@@ -5,7 +5,7 @@ import { formatISODateTime, getCurrentFormattedTime } from './utils';
 import { FolderSelectModal } from './folderSelectModal';
 
 interface CuboxSyncSettings {
-	domain: string;
+	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
 	apiKey: string;
 	folderFilter: string[];
 	typeFilter: string;
@@ -22,7 +22,7 @@ interface CuboxSyncSettings {
 }
 
 const DEFAULT_SETTINGS: CuboxSyncSettings = {
-	domain: 'cubox.cc',
+	domain: '', // 默认为空，表示未选择
 	apiKey: '',
 	folderFilter: [],
 	typeFilter: '',
@@ -81,9 +81,6 @@ export default class CuboxSyncPlugin extends Plugin {
 
 		// 设置自动同步
 		this.setupAutoSync();
-
-		// 加载样式
-		this.loadStyles();
 	}
 
 	onunload() {
@@ -254,48 +251,11 @@ export default class CuboxSyncPlugin extends Plugin {
 		// 使用新的格式化方法
 		return formatISODateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');
 	}
-
-	private loadStyles() {
-		// 添加自定义样式
-		const styleEl = document.createElement('style');
-		styleEl.id = 'cubox-sync-styles';
-		styleEl.textContent = `
-			/* 文件夹选择模态框样式 */
-			.folder-list {
-				max-height: 300px;
-				overflow-y: auto;
-				margin: 10px 0;
-				border: 1px solid var(--background-modifier-border);
-				border-radius: 4px;
-				padding: 5px;
-			}
-
-			.modal-footer {
-				display: flex;
-				justify-content: flex-end;
-				margin-top: 20px;
-				gap: 10px;
-			}
-
-			.modal-footer button {
-				padding: 6px 12px;
-				border-radius: 4px;
-				background-color: var(--interactive-normal);
-				color: var(--text-normal);
-				cursor: pointer;
-			}
-
-			.modal-footer button.mod-cta {
-				background-color: var(--interactive-accent);
-				color: var(--text-on-accent);
-			}
-		`;
-		document.head.appendChild(styleEl);
-	}
 }
 
 class CuboxSyncSettingTab extends PluginSettingTab {
 	plugin: CuboxSyncPlugin;
+	apiKeySetting: Setting; // 添加一个属性来存储 API Key 设置
 
 	constructor(app: App, plugin: CuboxSyncPlugin) {
 		super(app, plugin);
@@ -307,37 +267,61 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		// 添加 Cubox 标题和版本信息
+		new Setting(containerEl)
+			.setName('Cubox')
+			.setDesc(`Created by Cubox, version ${this.plugin.manifest.version}`)
+			//.setClass('cubox-header-setting');
+		
 		// 连接设置部分
-		containerEl.createEl('h2', {text: 'Connect Obsidian to Your Cubox'});
+		containerEl.createEl('h3', {text: 'Connect Obsidian to Your Cubox'});
 
+		// 修改域名选择下拉框
 		new Setting(containerEl)
 			.setName('Cubox Server Domain')
 			.setDesc('Select the correct domain name of the Cubox you are using.')
 			.addDropdown(dropdown => dropdown
-				.addOption('cubox.cc', 'cubox.cc')
+				.addOption('', 'Choose Region')
+				.addOption('cubox.cc', 'cubox.cc (international)')
+				.addOption('cubox.pro', 'cubox.pro')
 				.setValue(this.plugin.settings.domain)
 				.onChange(async (value) => {
 					this.plugin.settings.domain = value;
 					await this.plugin.saveSettings();
+					
+					// 更新 API Key 设置的描述和状态
+					this.updateApiKeySetting();
 				}));
 
-		new Setting(containerEl)
+		// 添加 API Key 设置
+		this.apiKeySetting = new Setting(containerEl)
 			.setName('Your Cubox API Key')
-			.setDesc('You can create a key in the settings of Cubox web app.')
-			.addText(text => text
-				.setPlaceholder('Enter your API key')
-				.setValue(this.plugin.settings.apiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.apiKey = value;
-					await this.plugin.saveSettings();
-				}));
+			.setDesc('Please select a region first')
+			.addText(text => {
+				text.setPlaceholder('Enter your API key')
+					.setValue(this.plugin.settings.apiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.apiKey = value;
+						await this.plugin.saveSettings();
+					});
+				
+				// 如果未选择域名，则禁用输入框
+				if (!this.plugin.settings.domain) {
+					text.inputEl.disabled = true;
+				}
+				
+				return text;
+			});
+		
+		// 初始化 API Key 设置的描述和状态
+		this.updateApiKeySetting();
 
 		// 过滤器设置部分
-		containerEl.createEl('h2', {text: 'Filter'});
+		containerEl.createEl('h3', {text: 'Filter'});
 
 		new Setting(containerEl)
-			.setName('Manage')
-			.setDesc('选择要同步的文件夹')
+			.setName('Folder Filter')
+			.setDesc('Manage Cubox folders to be synced')
 			.addButton(button => button
 				.setButtonText(this.getFolderFilterButtonText())
 				.onClick(async () => {
@@ -388,11 +372,11 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// 同步设置部分
-		containerEl.createEl('h2', {text: 'Sync'});
+		containerEl.createEl('h3', {text: 'Sync'});
 
 		new Setting(containerEl)
-			.setName('Frequency')
-			.setDesc('Enter the xxxxx, 0 means manual sync')
+			.setName('Sync Interval')
+			.setDesc('Auto sync interval (in minutes). 0 means manual sync. Each item syncs only once. Subsequent updates won’t be synced, and modifications in Obsidian won’t affect Cubox. We recommend avoiding frequent updates.')
 			.addText(text => text
 				.setPlaceholder('Enter sync frequency in minutes')
 				.setValue(String(this.plugin.settings.syncFrequency))
@@ -403,8 +387,8 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Target Folder')
-			.setDesc('Select the folder you would like to sync')
+			.setName('Folder')
+			.setDesc('Select the folder you’d like to sync to')
 			.addText(text => text
 				.setPlaceholder('Enter target folder path')
 				.setValue(this.plugin.settings.targetFolder)
@@ -444,6 +428,11 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.contentTemplate = value;
 					await this.plugin.saveSettings();
+				})
+				// 设置文本区域的大小
+				.then(textArea => {
+					textArea.inputEl.rows = 8;  // 设置行数
+					textArea.inputEl.cols = 50; // 设置列数
 				}));
 
 		new Setting(containerEl)
@@ -468,7 +457,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// 状态部分
-		containerEl.createEl('h2', {text: 'Status'});
+		containerEl.createEl('h3', {text: 'Status'});
 		containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
 
 		// 添加测试连接按钮
@@ -481,15 +470,48 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					await this.plugin.cuboxApi.testConnection();
 				}));
 
-		// 添加立即同步按钮
-		new Setting(containerEl)
-			.setName('Sync Now')
-			.setDesc('Manually sync Cubox data')
-			.addButton(button => button
-				.setButtonText('Sync')
-				.onClick(async () => {
-					await this.plugin.syncCubox();
-				}));
+	}
+
+	// 添加一个方法来更新 API Key 设置的描述和状态
+	private updateApiKeySetting(): void {
+		const domain = this.plugin.settings.domain;
+		const textComponent = this.apiKeySetting.components[0] as any;
+		
+		if (!domain) {
+			// 未选择域名
+			this.apiKeySetting.setDesc('Please select a region first');
+			textComponent.inputEl.disabled = true;
+		} else {
+			// 已选择域名，更新描述和链接
+			const url = `https://${domain}/my/settings/extensions`;
+			const descEl = this.apiKeySetting.descEl;
+			
+			// 清空现有描述
+			descEl.empty();
+			
+			// 添加新的描述文本和链接
+			descEl.appendChild(
+				createSpan({text: 'You can create a key in the '})
+			);
+			
+			descEl.appendChild(
+				createEl('a', {
+					text: 'Extension Settings',
+					href: url,
+					attr: {
+						target: '_blank',
+						rel: 'noopener'
+					}
+				})
+			);
+			
+			descEl.appendChild(
+				createSpan({text: ' of Cubox web app.'})
+			);
+			
+			// 启用输入框
+			textComponent.inputEl.disabled = false;
+		}
 	}
 
 	// 获取文件夹过滤器按钮文本
