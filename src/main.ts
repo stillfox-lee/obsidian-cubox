@@ -2,15 +2,17 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { CuboxApi, CuboxApiOptions } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatISODateTime, getCurrentFormattedTime } from './utils';
-import { FolderSelectModal } from './folderSelectModal';
+import { FolderSelectModal } from './modal/folderSelectModal';
 import { filenameTemplateInstructions, metadataTemplateInstructions, contentTemplateInstructions } from './templateInstructions';
+import { TypeSelectModal } from './modal/typeSelectModal';
+import { StatusSelectModal } from './modal/statusSelectModal';
 
 interface CuboxSyncSettings {
 	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
 	apiKey: string;
 	folderFilter: string[];
-	typeFilter: string;
-	statusFilter: 'all' | 'read' | 'starred' | 'annotated';
+	typeFilter: string[];
+	statusFilter: string[];
 	syncFrequency: number;
 	targetFolder: string;
 	filenameTemplate: string;
@@ -20,14 +22,15 @@ interface CuboxSyncSettings {
 	dateFormat: string;
 	lastSyncTime: number;
 	lastSyncCardId: string | null;
+	syncing: boolean; // 添加同步状态标志
 }
 
 const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	domain: '', // 默认为空，表示未选择
 	apiKey: '',
 	folderFilter: [],
-	typeFilter: '',
-	statusFilter: 'all',
+	typeFilter: [],
+	statusFilter: ['all'],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{cardTitle}}-{{createDate}}',
@@ -36,7 +39,8 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	highlightInContent: true,
 	dateFormat: 'YYYY-MM-dd',
 	lastSyncTime: 0,
-	lastSyncCardId: null
+	lastSyncCardId: null,
+	syncing: false // 默认为非同步状态
 }
 
 export default class CuboxSyncPlugin extends Plugin {
@@ -131,10 +135,27 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async syncCubox(continueLastSync: boolean = false) {
+		// 如果已经在同步中，则跳过
+		if (this.settings.syncing) {
+			new Notice('同步已在进行中，请等待当前同步完成');
+			return;
+		}
+		
 		try {
+			// 设置同步状态为 true
+			this.settings.syncing = true;
+			await this.saveSettings();
+			
+			// 更新状态栏显示
+			const statusBarItemEl = this.addStatusBarItem();
+			statusBarItemEl.setText(`正在同步 Cubox...`);
+			
 			// 检查 API 连接
 			const isConnected = await this.cuboxApi.testConnection();
 			if (!isConnected) {
+				this.settings.syncing = false;
+				await this.saveSettings();
+				statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()}`);
 				return;
 			}
 			
@@ -206,6 +227,9 @@ export default class CuboxSyncPlugin extends Plugin {
 					await this.app.vault.adapter.write(filePath, finalContent);
 					
 					syncCount++;
+					
+					// 更新状态栏显示同步进度
+					statusBarItemEl.setText(`正在同步 Cubox: ${syncCount} 篇文章已同步`);
 				}
 				
 				// 更新分页参数
@@ -225,12 +249,27 @@ export default class CuboxSyncPlugin extends Plugin {
 			
 			// 同步完成后，清除 lastSyncCardId（表示完整同步已完成）
 			this.settings.lastSyncCardId = null;
+			this.settings.lastSyncTime = Date.now();
+			
+			// 设置同步状态为 false
+			this.settings.syncing = false;
 			await this.saveSettings();
+			
+			// 更新状态栏
+			statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()}`);
 			
 			new Notice(`成功同步 ${syncCount} 篇 Cubox 文章`);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);
 			new Notice('同步 Cubox 数据失败，请检查设置和网络连接');
+			
+			// 出错时也要重置同步状态
+			this.settings.syncing = false;
+			await this.saveSettings();
+			
+			// 更新状态栏
+			const statusBarItemEl = this.addStatusBarItem();
+			statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()} (失败)`);
 		}
 	}
 
@@ -325,12 +364,16 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 			.setDesc('Manage Cubox folders to be synced')
 			.addButton(button => button
 				.setButtonText(this.getFolderFilterButtonText())
+				.setCta()
 				.onClick(async () => {
 					// 确保 API 已初始化
 					if (!this.plugin.settings.apiKey) {
 						new Notice('请先设置 API Key');
 						return;
 					}
+					
+					// 显示加载状态
+					button.setButtonText('Loading folders...');
 					
 					// 打开文件夹选择模态框
 					const modal = new FolderSelectModal(
@@ -349,27 +392,56 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Type Filter')
-			.setDesc('Enter the xxxxx, 0 means manual sync')
-			.addDropdown(dropdown => dropdown
-				.addOption('', 'Sync all the items')
-				.setValue(this.plugin.settings.typeFilter)
-				.onChange(async (value) => {
-					this.plugin.settings.typeFilter = value;
-					await this.plugin.saveSettings();
+			.setDesc('Manage Cubox content types to be synced')
+			.addButton(button => button
+				.setButtonText(this.getTypeFilterButtonText())
+				.setCta()
+				.onClick(async () => {
+					// 确保 API 已初始化
+					if (!this.plugin.settings.apiKey) {
+						new Notice('请先设置 API Key');
+						return;
+					}
+					
+					// 打开类型选择模态框
+					const modal = new TypeSelectModal(
+						this.app, 
+						this.plugin.settings.typeFilter,
+						async (selectedTypes) => {
+							this.plugin.settings.typeFilter = selectedTypes;
+							await this.plugin.saveSettings();
+							// 更新按钮文本
+							button.setButtonText(this.getTypeFilterButtonText());
+						}
+					);
+					modal.open();
 				}));
 
 		new Setting(containerEl)
 			.setName('Status Filter')
-			.setDesc('Only the items that match the status will be synced.')
-			.addDropdown(dropdown => dropdown
-				.addOption('all', 'Sync all the items')
-				.addOption('read', 'Sync only read items')
-				.addOption('starred', 'Sync only starred items')
-				.addOption('annotated', 'Sync only annotated items')
-				.setValue(this.plugin.settings.statusFilter || 'all')
-				.onChange(async (value) => {
-					this.plugin.settings.statusFilter = value as 'all' | 'read' | 'starred' | 'annotated';
-					await this.plugin.saveSettings();
+			.setDesc('Manage Cubox content status to be synced')
+			.addButton(button => button
+				.setButtonText(this.getStatusFilterButtonText())
+				.setCta()
+				.onClick(async () => {
+					// 确保 API 已初始化
+					if (!this.plugin.settings.apiKey) {
+						new Notice('请先设置 API Key');
+						return;
+					}
+					
+					// 打开状态选择模态框
+					const modal = new StatusSelectModal(
+						this.app, 
+						this.plugin.settings.statusFilter,
+						async (selectedStatuses) => {
+							this.plugin.settings.statusFilter = selectedStatuses;
+							await this.plugin.saveSettings();
+							// 更新按钮文本
+							button.setButtonText(this.getStatusFilterButtonText());
+						}
+					);
+					modal.open();
 				}));
 
 		// 同步设置部分
@@ -443,8 +515,8 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				})
 				// 设置文本区域的大小
 				.then(textArea => {
-					textArea.inputEl.rows = 6;
-					textArea.inputEl.cols = 50;
+					textArea.inputEl.rows = 20;
+					textArea.inputEl.cols = 30;
 				}))
 			.addButton(button => button
 				.setIcon('reset')
@@ -470,8 +542,8 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				})
 				// 设置文本区域的大小
 				.then(textArea => {
-					textArea.inputEl.rows = 8;
-					textArea.inputEl.cols = 50;
+					textArea.inputEl.rows = 20;
+					textArea.inputEl.cols = 30;
 				}))
 			.addButton(button => button
 				.setIcon('reset')
@@ -544,9 +616,46 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 	private getFolderFilterButtonText(): string {
 		const count = this.plugin.settings.folderFilter.length;
 		if (count === 0) {
-			return 'Sync all folders';
+			return 'Manage';
 		} else {
 			return `已选择 ${count} 个文件夹`;
+		}
+	}
+
+	// 修改获取类型过滤器按钮文本的方法
+	private getTypeFilterButtonText(): string {
+		const typeFilters = this.plugin.settings.typeFilter;
+		if (!typeFilters || typeFilters.length === 0) {
+			return 'Manage';
+		} else {
+			// 将类型ID转换为可读名称
+			const typeMap: {[key: string]: string} = {
+				'article': 'Article',
+				'snippet': 'Snippet',
+				'memo': 'Memo',
+				'image': 'Image',
+				'audio': 'Audio',
+				'video': 'Video',
+				'file': 'File'
+			};
+			
+			// 如果选择了所有类型，显示"All Types"
+			if (typeFilters.length === Object.keys(typeMap).length) {
+				return 'All Types';
+			}
+			
+			// 否则显示选择的类型数量
+			return `已选择 ${typeFilters.length} 个类型`;
+		}
+	}
+
+	private getStatusFilterButtonText(): string {
+		const statusFilters = this.plugin.settings.statusFilter;
+		if (!statusFilters || statusFilters.length === 0 || 
+			(statusFilters.length === 1 && statusFilters[0] === 'all')) {
+			return 'All Items';
+		} else {
+			return `已选择 ${statusFilters.length} 个状态`;
 		}
 	}
 }

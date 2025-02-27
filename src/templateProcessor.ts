@@ -24,11 +24,35 @@ export class TemplateProcessor {
             return article.title || 'Untitled';
         }
 
-        // 准备用于 Mustache 的数据
-        const data = this.prepareTemplateData(article);
+        // 使用简单的字符串替换而不是 Mustache
+        let filename = template;
         
-        // 使用 Mustache 渲染模板
-        const filename = Mustache.render(template, data);
+        // 替换所有支持的模板字段
+        if (article.title) {
+            filename = filename.replace(/{{{card_title}}}/g, article.title);
+            filename = filename.replace(/{{{article_title}}}/g, article.title);
+        }
+        
+        const createDate = article.createTime ? formatISODateTime(article.createTime, this.dateFormat) : '';
+        if (createDate) {
+            filename = filename.replace(/{{{date_saved}}}/g, createDate);
+        }
+        
+        const updateDate = article.updateTime ? formatISODateTime(article.updateTime, this.dateFormat) : '';
+        if (updateDate) {
+            filename = filename.replace(/{{{date_updated}}}/g, updateDate);
+        }
+        
+        if (article.domain) {
+            filename = filename.replace(/{{{site_domain}}}/g, article.domain);
+        }
+        
+        if (article.type) {
+            filename = filename.replace(/{{{type}}}/g, article.type);
+        }
+        
+        // 移除任何未被替换的模板标记 (如果某些字段不存在)
+        filename = filename.replace(/{{{[^}]+}}}/g, '');
         
         // 处理文件名安全性
         return generateSafeFileArticleName(filename);

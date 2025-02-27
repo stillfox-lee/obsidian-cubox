@@ -37,6 +37,7 @@ export interface CuboxApiOptions {
 export interface CuboxFolder {
     id: string;
     name: string;
+    nested_name: string;
 }
 
 interface ListResponse {
@@ -110,74 +111,65 @@ export class CuboxApi {
 
     /**
      * 获取文章列表
-     * @param folders 文件夹过滤数组
-     * @param type 类型过滤 
-     * @param status 状态过滤 'all' | 'read' | 'starred' | 'annotated'
+     * @param folderFilter 文件夹过滤数组
+     * @param typeFilter 类型过滤 
+     * @param statusFilter 状态过滤 'all' | 'read' | 'starred' | 'annotated'
      * @param lastCardId 上一页最后一篇文章的ID
      */
     async getArticles(
-        folders: string[] = [],
-        type?: string,
-        status?: string,
-        lastCardId: string | null = null,
-        pageSize: number = 50
-    ): Promise<{
-        articles: CuboxArticle[],
-        hasMore: boolean,
-        lastCardId: string | null
-    }> {
+        folderFilter: string[],
+        typeFilter: string[],
+        statusFilter: string[],
+        lastCardId: string | null = null
+    ): Promise<{ articles: any[], hasMore: boolean, lastCardId: string | null }> {
         try {
-            const searchParams = new URLSearchParams();
+            // 构建请求参数
+            const params: any = {
+                limit: 20,
+            };
             
-            if (lastCardId !== null && lastCardId.length > 0) {
-                searchParams.append('lastCardId', lastCardId);
-            }
-            searchParams.append('pageSize', pageSize.toString());
-            
-            // 如果有选择文件夹，添加文件夹过滤参数
-            if (folders && folders.length > 0) {
-                searchParams.append('folders', folders.join(','));
+            // 添加文件夹过滤
+            if (folderFilter && folderFilter.length > 0) {
+                params.folder_id = folderFilter;
             }
             
-            // 添加状态过滤参数
-            if (status && status !== 'all') {
-                switch (status) {
-                    case 'read':
-                        searchParams.append('isRead', 'true');
-                        break;
-                    case 'starred':
-                        searchParams.append('hasStar', 'true');
-                        break;
-                    case 'annotated':
-                        searchParams.append('hasAnnotation', 'true');
-                        break;
+            // 添加类型过滤
+            if (typeFilter && typeFilter.length > 0) {
+                params.type = typeFilter;
+            }
+            
+            // 添加状态过滤 - 修改为支持多选
+            if (statusFilter && statusFilter.length > 0) {
+                // 如果包含 'all'，则不添加状态过滤
+                if (!statusFilter.includes('all')) {
+                    // 处理多个状态过滤
+                    if (statusFilter.includes('read')) params.is_read = true;
+                    if (statusFilter.includes('starred')) params.is_starred = true;
+                    if (statusFilter.includes('archived')) params.is_archived = true;
+                    if (statusFilter.includes('annotated')) params.is_annotated = true;
                 }
             }
-
-            const path = `/c/api/third-party/card/list?${searchParams.toString()}`;
-            const response = await this.request(path) as ListResponse;
             
-            const articles = response.data.list.map(article => {
-                // 添加兼容字段，并格式化日期
+            // 添加分页参数
+            if (lastCardId) {
+                params.last_id = lastCardId;
+            }
+            
+            // 发送请求
+            const response = await this.request('/v2/article/list', params);
+            
+            // 处理响应
+            if (response && response.data) {
                 return {
-                    ...article,
-                    id: article.cardId,
-                    createDate: article.createTime ? formatISODateTime(article.createTime) : '',
-                    // 其他可能需要的兼容字段
+                    articles: response.data.data || [],
+                    hasMore: response.data.has_more || false,
+                    lastCardId: response.data.last_id || null
                 };
-            });
+            }
             
-            const hasMore = articles.length >= pageSize;
-            const newLastCardId = articles.length > 0 ? articles[articles.length - 1].cardId : null;
-
-            return {
-                articles,
-                hasMore,
-                lastCardId: newLastCardId
-            };
+            return { articles: [], hasMore: false, lastCardId: null };
         } catch (error) {
-            console.error('获取 Cubox 文章失败:', error);
-            new Notice('获取 Cubox 文章失败');
+            console.error('获取文章列表失败:', error);
             throw error;
         }
     }
@@ -224,7 +216,10 @@ export class CuboxApi {
             const path = '/c/api/third-party/folder/list';
             const response = await this.request(path) as FoldersResponse;
             
-            return response.data.list || [];
+            return response.data.list.map(folder => ({
+                ...folder,
+                nested_name: folder.name
+            }));
         } catch (error) {
             console.error('获取 Cubox 文件夹列表失败:', error);
             new Notice('获取 Cubox 文件夹列表失败');
