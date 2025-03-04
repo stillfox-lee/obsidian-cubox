@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder } from 'obsidian';
+import { addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder } from 'obsidian';
 import { CuboxApi, CuboxApiOptions } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatISODateTime, getCurrentFormattedTime } from './utils';
@@ -61,8 +61,12 @@ export default class CuboxSyncPlugin extends Plugin {
 		// 设置模板处理器的日期格式
 		this.templateProcessor.setDateFormat(this.settings.dateFormat);
 
+		
 		// 添加左侧图标
-		const ribbonIconEl = this.addRibbonIcon('download', 'Sync Cubox', async (evt: MouseEvent) => {
+		const iconId = 'Cubox'
+		addIcon(iconId, '<svg viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_832_147)"><path d="M16.4832 14.9619C16.3985 19.9047 13.3129 19.7653 9.40222 19.7653C5.49152 19.7653 3.46973 18.9255 3.46973 14.6576C3.46973 10.2101 5.49152 6.90909 9.40222 6.90909C13.3129 6.90909 16.4832 10.5144 16.4832 14.9619Z" stroke="currentColor" stroke-width="1.72727"/><rect x="0.863636" y="0.863636" width="17.2727" height="17.2727" rx="8.63636" stroke="currentColor" stroke-width="1.72727"/></g><ellipse cx="6.90905" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><ellipse cx="9.49987" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><defs><clipPath id="clip0_832_147"><rect width="19" height="19" rx="9.5" fill="white"/></clipPath></defs></svg>');
+
+		const ribbonIconEl = this.addRibbonIcon(iconId, iconId, async (evt: MouseEvent) => {
 			new Notice('开始同步 Cubox 数据...');
 			await this.syncCubox();
 		});

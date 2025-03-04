@@ -1,6 +1,7 @@
 import { CuboxArticle, CuboxHighlight } from './cuboxApi';
 import { formatISODateTime, generateSafeFileArticleName } from './utils';
 import * as Mustache from 'mustache';
+import { parseYaml, stringifyYaml } from 'obsidian';
 
 export class TemplateProcessor {
     // 存储日期格式
@@ -68,11 +69,60 @@ export class TemplateProcessor {
             return '';
         }
 
-        // 准备用于 Mustache 的数据
-        const data = this.prepareTemplateData(article);
-        
-        // 使用 Mustache 渲染模板
-        return Mustache.render(template, data);
+        try {
+            // 首先尝试将模板解析为 YAML 对象
+            // 如果模板已经是 YAML 格式，则直接使用
+            const yamlObj = parseYaml(template);
+            
+            // 准备用于替换的数据
+            const data = this.prepareTemplateData(article);
+            
+            // 递归处理 YAML 对象中的所有字符串值
+            const processedYaml = this.processYamlObject(yamlObj, data);
+            
+            // 将处理后的对象转换回 YAML 字符串
+            return stringifyYaml(processedYaml);
+        } catch (e) {
+            // 如果解析失败，则使用 Mustache 渲染模板
+            // 这允许用户直接输入 YAML 格式的字符串
+            const data = this.prepareTemplateData(article);
+            const renderedTemplate = Mustache.render(template, data);
+            
+            // 尝试将渲染后的模板解析为 YAML 并重新格式化
+            try {
+                const yamlObj = parseYaml(renderedTemplate);
+                return stringifyYaml(yamlObj);
+            } catch (e) {
+                // 如果仍然无法解析，则返回原始渲染结果
+                return renderedTemplate;
+            }
+        }
+    }
+
+    /**
+     * 递归处理 YAML 对象中的所有字符串值
+     * @param obj YAML 对象
+     * @param data 替换数据
+     */
+    private processYamlObject(obj: any, data: any): any {
+        if (typeof obj === 'string') {
+            // 如果是字符串，使用 Mustache 进行模板替换
+            return Mustache.render(obj, data);
+        } else if (Array.isArray(obj)) {
+            // 如果是数组，递归处理每个元素
+            return obj.map(item => this.processYamlObject(item, data));
+        } else if (obj !== null && typeof obj === 'object') {
+            // 如果是对象，递归处理每个属性
+            const result: {[key: string]: any} = {};
+            for (const key in obj) {
+                // 处理键名中的模板变量
+                const processedKey = Mustache.render(key, data);
+                result[processedKey] = this.processYamlObject(obj[key], data);
+            }
+            return result;
+        }
+        // 其他类型（数字、布尔值等）直接返回
+        return obj;
     }
 
     /**
@@ -133,8 +183,36 @@ export class TemplateProcessor {
             // 添加原始对象，以便可以访问所有属性
             article: article,
             // 添加高亮数组，以便可以在模板中循环
-            highlightsList: article.highlights || []
+            highlightsList: article.highlights || [],
+            // 添加标签数组
+            tags: article.tags || []
         };
+    }
+
+    /**
+     * 将对象转换为 YAML 格式的 frontmatter
+     * @param obj 要转换的对象
+     */
+    objectToYamlFrontmatter(obj: any): string {
+        try {
+            return stringifyYaml(obj);
+        } catch (e) {
+            console.error('将对象转换为 YAML 失败:', e);
+            return '';
+        }
+    }
+
+    /**
+     * 解析 YAML 格式的 frontmatter 为对象
+     * @param yaml YAML 字符串
+     */
+    yamlFrontmatterToObject(yaml: string): any {
+        try {
+            return parseYaml(yaml);
+        } catch (e) {
+            console.error('解析 YAML 失败:', e);
+            return {};
+        }
     }
 
     /**
