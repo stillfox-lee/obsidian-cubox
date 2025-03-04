@@ -155,7 +155,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			statusBarItemEl.setText(`正在同步 Cubox...`);
 			
 			// 检查 API 连接
-			const isConnected = await this.cuboxApi.testConnection();
+			const isConnected = await this.cuboxApi.testConnection(this.settings.apiKey);
 			if (!isConnected) {
 				this.settings.syncing = false;
 				await this.saveSettings();
@@ -175,10 +175,13 @@ export default class CuboxSyncPlugin extends Plugin {
 			while (hasMore) {
 				// 获取文章列表
 				const result = await this.cuboxApi.getArticles(
-					this.settings.folderFilter,
-					this.settings.typeFilter,
-					this.settings.statusFilter,
-					lastCardId
+					this.settings.apiKey,
+					{
+						lastCardId: lastCardId,
+						folderFilter: this.settings.folderFilter,
+						typeFilter: this.settings.typeFilter,
+						statusFilter: this.settings.statusFilter
+					}
 				);
 				
 				const { articles, hasMore: moreArticles, lastCardId: newLastCardId } = result;
@@ -190,11 +193,11 @@ export default class CuboxSyncPlugin extends Plugin {
 				// 处理每篇文章
 				for (const article of articles) {
 					// 获取文章详情和高亮
-					const content = await this.cuboxApi.getArticleDetail(article.cardId);
+					const content = await this.cuboxApi.getArticleDetail(this.settings.apiKey, article.cardId);
 					if (content === null) continue;
 					
 					// 获取高亮内容
-					const highlights = await this.cuboxApi.getHighlights(article.cardId);
+					const highlights = await this.cuboxApi.getHighlights(this.settings.apiKey, article.cardId);
 					
 					// 合并文章基本信息、内容和高亮
 					const fullArticle = {
@@ -379,19 +382,29 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					// 显示加载状态
 					button.setButtonText('Loading folders...');
 					
-					// 打开文件夹选择模态框
-					const modal = new FolderSelectModal(
-						this.app, 
-						this.plugin.cuboxApi, 
-						this.plugin.settings.folderFilter,
-						async (selectedFolders) => {
-							this.plugin.settings.folderFilter = selectedFolders;
-							await this.plugin.saveSettings();
-							// 更新按钮文本
-							button.setButtonText(this.getFolderFilterButtonText());
-						}
-					);
-					modal.open();
+					try {
+						// 先获取文件夹数据
+						const folders = await this.plugin.cuboxApi.getFolders(this.plugin.settings.apiKey);
+						
+						// 打开文件夹选择模态框，传入已获取的文件夹数据
+						const modal = new FolderSelectModal(
+							this.app, 
+							folders, // 直接传入获取到的文件夹数据
+							this.plugin.settings.folderFilter,
+							async (selectedFolders) => {
+								this.plugin.settings.folderFilter = selectedFolders;
+								await this.plugin.saveSettings();
+								// 更新按钮文本
+								button.setButtonText(this.getFolderFilterButtonText());
+							}
+						);
+						modal.open();
+					} catch (error) {
+						console.error('获取文件夹列表失败:', error);
+						new Notice('获取文件夹列表失败，请检查网络连接和 API Key');
+						// 恢复按钮文本
+						button.setButtonText(this.getFolderFilterButtonText());
+					}
 				}));
 
 		new Setting(containerEl)
@@ -453,7 +466,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Sync Interval')
-			.setDesc('Auto sync interval (in minutes). 0 means manual sync. Each item syncs only once. Subsequent updates won’t be synced, and modifications in Obsidian won’t affect Cubox. We recommend avoiding frequent updates.')
+			.setDesc('Auto sync interval (in minutes). 0 means manual sync. Each item syncs only once. Subsequent updates won\'t be synced, and modifications in Obsidian won\'t affect Cubox. We recommend avoiding frequent updates.')
 			.addText(text => text
 				.setPlaceholder('Enter sync frequency in minutes')
 				.setValue(String(this.plugin.settings.syncFrequency))
@@ -465,7 +478,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Folder')
-			.setDesc('Select the folder you’d like to sync to')
+			.setDesc('Select the folder you\'d like to sync to')
 			.addText(text => text
 				.setPlaceholder('Enter target folder path')
 				.setValue(this.plugin.settings.targetFolder)
@@ -569,7 +582,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Test')
 				.onClick(async () => {
-					await this.plugin.cuboxApi.testConnection();
+					await this.plugin.cuboxApi.testConnection(this.plugin.settings.apiKey);
 				}));
 
 	}
