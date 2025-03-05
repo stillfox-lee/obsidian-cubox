@@ -38,6 +38,14 @@ export interface CuboxFolder {
     id: string;
     name: string;
     nested_name: string;
+    uncategorized: boolean;
+}
+
+export interface CuboxTag {
+    id: string;
+    name: string;
+    nested_name: string;
+    parent_id: string | null;
 }
 
 interface ListResponse {
@@ -57,25 +65,46 @@ interface ContentResponse {
 interface FoldersResponse {
     code: number;
     message: string;
-    data: {
-        list: CuboxFolder[];
-    };
+    data: CuboxFolder[];
+}
+
+interface TagsResponse {
+    code: number;
+    message: string;
+    data: CuboxTag[];
 }
 
 export class CuboxApi {
     private endpoint: string;
+    private apiKey: string;
 
     constructor(options: CuboxApiOptions) {
-        this.endpoint = `https://${options.domain}`;
+        this.endpoint = 'https://test.cubox.pro'//`https://${options.domain}`;
+        this.apiKey = options.apiKey;
+    }
+
+    /**
+     * 更新 API Key
+     */
+    updateApiKey(apiKey: string): void {
+        this.apiKey = apiKey;
+    }
+
+    /**
+     * 同时更新域名和 API Key
+     */
+    updateConfig(options: CuboxApiOptions): void {
+        this.endpoint = 'https://test.cubox.pro'// `https://${options.domain}`;
+        this.apiKey = options.apiKey;
     }
 
     /**
      * 测试 API 连接是否有效
      */
-    async testConnection(apiKey: string): Promise<boolean> {
+    async testConnection(): Promise<boolean> {
         try {
             // 尝试获取一篇文章来测试连接
-            const result = await this.getArticles(apiKey, { lastCardId: null, pageSize: 1 });
+            const result = await this.getArticles({ lastCardId: null, pageSize: 1 });
             new Notice('测试 Cubox 连接成功');
             return true;
         } catch (error) {
@@ -85,10 +114,10 @@ export class CuboxApi {
         }
     }
 
-    private async request(path: string, apiKey: string, options: RequestInit = {}) {
+    private async request(path: string, options: RequestInit = {}) {
         const url = `${this.endpoint}${path}`;
         const headers = {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
         };
 
@@ -109,11 +138,9 @@ export class CuboxApi {
 
     /**
      * 获取文章列表
-     * @param apiKey API密钥
      * @param params 请求参数
      */
     async getArticles(
-        apiKey: string, 
         params: { 
             lastCardId: string | null; 
             pageSize?: number;
@@ -157,7 +184,7 @@ export class CuboxApi {
             }
 
             const path = `/c/api/third-party/card/list?${searchParams.toString()}`;
-            const response = await this.request(path, apiKey) as ListResponse;
+            const response = await this.request(path) as ListResponse;
             
             const articles = response.data.list;
             const hasMore = articles.length >= pageSize;
@@ -176,13 +203,12 @@ export class CuboxApi {
 
     /**
      * 获取文章详情，包括内容
-     * @param apiKey API密钥
      * @param articleId 文章ID
      */
-    async getArticleDetail(apiKey: string, articleId: string): Promise<string | null> {
+    async getArticleDetail(articleId: string): Promise<string | null> {
         try {
             const path = `/c/api/third-party/card/content?cardId=${articleId}`;
-            const response = await this.request(path, apiKey) as ContentResponse;
+            const response = await this.request(path) as ContentResponse;
             
             // 直接返回文章内容
             return response.data;
@@ -195,10 +221,9 @@ export class CuboxApi {
 
     /**
      * 获取文章的高亮内容
-     * @param apiKey API密钥
      * @param articleId 文章ID
      */
-    async getHighlights(apiKey: string, articleId: string): Promise<CuboxHighlight[]> {
+    async getHighlights(articleId: string): Promise<CuboxHighlight[]> {
         try {
             // 这里需要实现获取高亮的API调用
             // 暂时返回空数组
@@ -212,21 +237,33 @@ export class CuboxApi {
 
     /**
      * 获取用户的文件夹列表
-     * @param apiKey API密钥
      */
-    async getFolders(apiKey: string): Promise<CuboxFolder[]> {
+    async getFolders(): Promise<CuboxFolder[]> {
         try {
-            const path = '/c/api/third-party/folder/list';
-            const response = await this.request(path, apiKey) as FoldersResponse;
+            const path = '/c/api/third-party/group/list';
+            const response = await this.request(path) as FoldersResponse;
             
-            return response.data.list.map(folder => ({
-                ...folder,
-                nested_name: folder.name
-            }));
+            return response.data;
         } catch (error) {
             console.error('获取 Cubox 文件夹列表失败:', error);
             new Notice('获取 Cubox 文件夹列表失败');
             throw error;
         }
     }
-} 
+
+    /**
+     * 获取用户的标签列表
+     */
+    async getTags(): Promise<CuboxTag[]> {
+        try {
+            const path = '/c/api/third-party/tag/list';
+            const response = await this.request(path) as TagsResponse;
+            
+            return response.data;
+        } catch (error) {
+            console.error('获取 Cubox 标签列表失败:', error);
+            new Notice('获取 Cubox 标签列表失败');
+            throw error;
+        }
+    }
+}

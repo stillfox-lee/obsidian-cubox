@@ -108,13 +108,33 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		// 保存之前的设置，用于比较
+		const oldSettings = { ...this.settings };
+		
+		// 保存新设置
 		await this.saveData(this.settings);
 		
 		// 更新 API 配置
-		this.cuboxApi = new CuboxApi({
-			domain: this.settings.domain,
-			apiKey: this.settings.apiKey
-		});
+		if (this.cuboxApi) {
+			// 检查域名或 API Key 是否发生变化
+			const domainChanged = oldSettings.domain !== this.settings.domain;
+			const apiKeyChanged = oldSettings.apiKey !== this.settings.apiKey;
+			
+			// 如果任一配置发生变化，则更新
+			if (domainChanged || apiKeyChanged) {
+				// 同时更新域名和 API Key
+				this.cuboxApi.updateConfig({
+					domain: this.settings.domain,
+					apiKey: this.settings.apiKey
+				});
+			}
+		} else {
+			// 如果实例不存在，创建新实例
+			this.cuboxApi = new CuboxApi({
+				domain: this.settings.domain,
+				apiKey: this.settings.apiKey
+			});
+		}
 		
 		// 更新模板处理器的日期格式
 		this.templateProcessor.setDateFormat(this.settings.dateFormat);
@@ -154,8 +174,8 @@ export default class CuboxSyncPlugin extends Plugin {
 			const statusBarItemEl = this.addStatusBarItem();
 			statusBarItemEl.setText(`正在同步 Cubox...`);
 			
-			// 检查 API 连接
-			const isConnected = await this.cuboxApi.testConnection(this.settings.apiKey);
+			// 测试连接
+			const isConnected = await this.cuboxApi.testConnection();
 			if (!isConnected) {
 				this.settings.syncing = false;
 				await this.saveSettings();
@@ -175,7 +195,6 @@ export default class CuboxSyncPlugin extends Plugin {
 			while (hasMore) {
 				// 获取文章列表
 				const result = await this.cuboxApi.getArticles(
-					this.settings.apiKey,
 					{
 						lastCardId: lastCardId,
 						folderFilter: this.settings.folderFilter,
@@ -192,12 +211,12 @@ export default class CuboxSyncPlugin extends Plugin {
 				
 				// 处理每篇文章
 				for (const article of articles) {
-					// 获取文章详情和高亮
-					const content = await this.cuboxApi.getArticleDetail(this.settings.apiKey, article.cardId);
+					// 获取文章内容
+					const content = await this.cuboxApi.getArticleDetail(article.cardId);
 					if (content === null) continue;
 					
 					// 获取高亮内容
-					const highlights = await this.cuboxApi.getHighlights(this.settings.apiKey, article.cardId);
+					const highlights = await this.cuboxApi.getHighlights(article.cardId);
 					
 					// 合并文章基本信息、内容和高亮
 					const fullArticle = {
@@ -384,7 +403,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					
 					try {
 						// 先获取文件夹数据
-						const folders = await this.plugin.cuboxApi.getFolders(this.plugin.settings.apiKey);
+						const folders = await this.plugin.cuboxApi.getFolders();
 						
 						// 打开文件夹选择模态框，传入已获取的文件夹数据
 						const modal = new FolderSelectModal(
@@ -407,6 +426,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					}
 				}));
 
+			
 		new Setting(containerEl)
 			.setName('Type Filter')
 			.setDesc('Manage Cubox content types to be synced')
@@ -582,7 +602,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Test')
 				.onClick(async () => {
-					await this.plugin.cuboxApi.testConnection(this.plugin.settings.apiKey);
+					await this.plugin.cuboxApi.testConnection();
 				}));
 
 	}
