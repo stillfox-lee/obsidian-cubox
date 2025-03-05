@@ -147,6 +147,7 @@ export class CuboxApi {
             folderFilter?: string[];
             typeFilter?: string[];
             statusFilter?: string[];
+            tagsFilter?: string[];
         } = { lastCardId: null }
     ): Promise<{ articles: CuboxArticle[], hasMore: boolean, lastCardId: string | null }> {
         try {
@@ -181,6 +182,14 @@ export class CuboxApi {
                     if (params.statusFilter.includes('archived')) searchParams.append('isArchived', 'true');
                     if (params.statusFilter.includes('annotated')) searchParams.append('isAnnotated', 'true');
                 }
+            }
+            
+            // 添加标签过滤
+            if (params.tagsFilter && params.tagsFilter.length > 0) {
+                params.tagsFilter.forEach(tag => {
+                    // 如果是空字符串，表示"No Tags"
+                    searchParams.append('tagId', tag);
+                });
             }
 
             const path = `/c/api/third-party/card/list?${searchParams.toString()}`;

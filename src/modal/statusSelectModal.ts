@@ -11,7 +11,6 @@ export class StatusSelectModal extends Modal {
         { id: 'all', name: 'All Items' },
         { id: 'read', name: 'Already Read Items' },
         { id: 'starred', name: 'Starred Items' },
-        { id: 'archived', name: 'Archived Items' },
         { id: 'annotated', name: 'Annotated Items' }
     ];
     private selectedStatuses: Set<string> = new Set();
@@ -57,7 +56,7 @@ export class StatusSelectModal extends Modal {
         });
         
         // 保存按钮
-        const saveButton = this.footerEl.createEl('button', { text: '保存', cls: 'mod-cta' });
+        const saveButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
             // 返回选中的状态
             const selectedIds = Array.from(this.selectedStatuses);

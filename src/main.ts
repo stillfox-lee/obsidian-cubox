@@ -6,6 +6,7 @@ import { FolderSelectModal } from './modal/folderSelectModal';
 import { filenameTemplateInstructions, metadataTemplateInstructions, contentTemplateInstructions } from './templateInstructions';
 import { TypeSelectModal } from './modal/typeSelectModal';
 import { StatusSelectModal } from './modal/statusSelectModal';
+import { TagSelectModal } from './modal/tagSelectModal';
 
 interface CuboxSyncSettings {
 	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
@@ -13,6 +14,7 @@ interface CuboxSyncSettings {
 	folderFilter: string[];
 	typeFilter: string[];
 	statusFilter: string[];
+	tagsFilter: string[]; // 添加标签过滤
 	syncFrequency: number;
 	targetFolder: string;
 	filenameTemplate: string;
@@ -31,6 +33,7 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	folderFilter: [],
 	typeFilter: [],
 	statusFilter: ['all'],
+	tagsFilter: [], // 默认为空数组，表示同步所有标签
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{cardTitle}}-{{createDate}}',
@@ -199,7 +202,8 @@ export default class CuboxSyncPlugin extends Plugin {
 						lastCardId: lastCardId,
 						folderFilter: this.settings.folderFilter,
 						typeFilter: this.settings.typeFilter,
-						statusFilter: this.settings.statusFilter
+						statusFilter: this.settings.statusFilter,
+						tagsFilter: this.settings.tagsFilter,
 					}
 				);
 				
@@ -426,7 +430,47 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					}
 				}));
 
-			
+		new Setting(containerEl)
+			.setName('Tag Filter')	
+			.setDesc('Manage Cubox tags to be synced')
+			.addButton(button => button
+				.setButtonText(this.getTagFilterButtonText())
+				.setCta()
+				.onClick(async () => {
+					// 确保 API 已初始化
+					if (!this.plugin.settings.apiKey) {
+						new Notice('请先设置 API Key');
+						return;
+					}
+					
+					// 显示加载状态
+					button.setButtonText('Loading tags...');
+					
+					try {
+						// 先获取标签数据
+						const tags = await this.plugin.cuboxApi.getTags();
+						
+						// 打开标签选择模态框，传入已获取的标签数据
+						const modal = new TagSelectModal(
+							this.app, 
+							tags, // 直接传入获取到的标签数据
+							this.plugin.settings.tagsFilter,
+							async (selectedTags) => {
+								this.plugin.settings.tagsFilter = selectedTags;
+								await this.plugin.saveSettings();
+								// 更新按钮文本
+								button.setButtonText(this.getTagFilterButtonText());
+							}
+						);
+						modal.open();
+					} catch (error) {
+						console.error('获取标签列表失败:', error);
+						new Notice('获取标签列表失败，请检查网络连接和 API Key');
+						// 恢复按钮文本
+						button.setButtonText(this.getTagFilterButtonText());
+					}
+				}));
+
 		new Setting(containerEl)
 			.setName('Type Filter')
 			.setDesc('Manage Cubox content types to be synced')
@@ -693,6 +737,16 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 			return 'All Items';
 		} else {
 			return `已选择 ${statusFilters.length} 个状态`;
+		}
+	}
+
+	private getTagFilterButtonText(): string {
+		if (!this.plugin.settings.tagsFilter || this.plugin.settings.tagsFilter.length === 0) {
+			return 'All Tags';
+		} else if (this.plugin.settings.tagsFilter.includes('')) {
+			return 'No Tags';
+		} else {
+			return `${this.plugin.settings.tagsFilter.length} Tags Selected`;
 		}
 	}
 }

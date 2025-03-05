@@ -71,13 +71,13 @@ export class TypeSelectModal extends Modal {
         const footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 添加取消按钮
-        const cancelButton = footerEl.createEl('button', { text: 'Cancel' });
+        const cancelButton = footerEl.createEl('button', { text: '取消' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
         // 添加保存按钮
-        const saveButton = footerEl.createEl('button', { text: 'Save', cls: 'mod-cta' });
+        const saveButton = footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
             // 过滤掉"All Items"，只保留实际类型
             const selectedTypes = Array.from(this.selectedTypes)
