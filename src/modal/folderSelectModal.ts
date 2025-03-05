@@ -85,25 +85,53 @@ export class FolderSelectModal extends Modal {
         this.listEl.empty();
         
         // 添加"All Items"选项
-        new Setting(this.listEl)
-            .setName('All Items')
-            .addToggle(toggle => toggle
-                .setValue(this.selectedFolders.has(ALL_FOLDERS_ID))
-                .onChange(value => {
-                    this.handleFolderToggle(ALL_FOLDERS_ID, value);
-                    this.redraw();
-                }));
+        const allItemsSetting = new Setting(this.listEl)
+            .setName('All Items');
+            
+        // 添加选中状态的类
+        if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
+            allItemsSetting.settingEl.addClass('is-selected');
+        }
+        
+        // 添加点击事件
+        allItemsSetting.settingEl.addEventListener('click', () => {
+            const isCurrentlySelected = this.selectedFolders.has(ALL_FOLDERS_ID);
+            this.handleFolderToggle(ALL_FOLDERS_ID, !isCurrentlySelected);
+            this.redraw();
+        });
+        
+        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+        allItemsSetting.addToggle(toggle => toggle
+            .setValue(this.selectedFolders.has(ALL_FOLDERS_ID))
+            .onChange(value => {
+                this.handleFolderToggle(ALL_FOLDERS_ID, value);
+                this.redraw();
+            }));
         
         // 添加每个文件夹的选项
         this.folders.forEach(folder => {
-            new Setting(this.listEl)
-                .setName(folder.nested_name)
-                .addToggle(toggle => toggle
-                    .setValue(this.isFolderSelected(folder.id))
-                    .onChange(value => {
-                        this.handleFolderToggle(folder.id, value);
-                        this.redraw();
-                    }));
+            const folderSetting = new Setting(this.listEl)
+                .setName(folder.nested_name);
+                
+            // 添加选中状态的类
+            if (this.isFolderSelected(folder.id)) {
+                folderSetting.settingEl.addClass('is-selected');
+            }
+            
+            // 添加点击事件
+            folderSetting.settingEl.addEventListener('click', () => {
+                const isCurrentlySelected = this.isFolderSelected(folder.id);
+                this.handleFolderToggle(folder.id, !isCurrentlySelected);
+                this.redraw();
+            });
+            
+            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+            folderSetting.addToggle(toggle => toggle
+                .setValue(this.isFolderSelected(folder.id))
+                .onChange(value => {
+                    this.handleFolderToggle(folder.id, value);
+                    this.redraw();
+                }));
         });
     }
     

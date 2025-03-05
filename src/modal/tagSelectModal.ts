@@ -106,35 +106,77 @@ export class TagSelectModal extends Modal {
         this.listEl.empty();
         
         // 添加"All Items"选项
-        new Setting(this.listEl)
-            .setName('All Items')
-            .addToggle(toggle => toggle
-                .setValue(this.selectedTags.has(ALL_TAGS_ID))
-                .onChange(value => {
-                    this.handleTagToggle(ALL_TAGS_ID, value);
-                    this.redraw();
-                }));
+        const allItemsSetting = new Setting(this.listEl)
+            .setName('All Items');
+            
+        // 添加选中状态的类
+        if (this.selectedTags.has(ALL_TAGS_ID)) {
+            allItemsSetting.settingEl.addClass('is-selected');
+        }
+        
+        // 添加点击事件
+        allItemsSetting.settingEl.addEventListener('click', () => {
+            const isCurrentlySelected = this.selectedTags.has(ALL_TAGS_ID);
+            this.handleTagToggle(ALL_TAGS_ID, !isCurrentlySelected);
+            this.redraw();
+        });
+        
+        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+        allItemsSetting.addToggle(toggle => toggle
+            .setValue(this.selectedTags.has(ALL_TAGS_ID))
+            .onChange(value => {
+                this.handleTagToggle(ALL_TAGS_ID, value);
+                this.redraw();
+            }));
         
         // 添加"No Tags"选项
-        new Setting(this.listEl)
-            .setName('No Tags')
-            .addToggle(toggle => toggle
-                .setValue(this.selectedTags.has(NO_TAGS_ID))
-                .onChange(value => {
-                    this.handleTagToggle(NO_TAGS_ID, value);
-                    this.redraw();
-                }));
+        const noTagsSetting = new Setting(this.listEl)
+            .setName('No Tags');
+            
+        // 添加选中状态的类
+        if (this.selectedTags.has(NO_TAGS_ID)) {
+            noTagsSetting.settingEl.addClass('is-selected');
+        }
+        
+        // 添加点击事件
+        noTagsSetting.settingEl.addEventListener('click', () => {
+            const isCurrentlySelected = this.selectedTags.has(NO_TAGS_ID);
+            this.handleTagToggle(NO_TAGS_ID, !isCurrentlySelected);
+            this.redraw();
+        });
+        
+        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+        noTagsSetting.addToggle(toggle => toggle
+            .setValue(this.selectedTags.has(NO_TAGS_ID))
+            .onChange(value => {
+                this.handleTagToggle(NO_TAGS_ID, value);
+                this.redraw();
+            }));
         
         // 添加每个标签的选项
         this.tags.forEach(tag => {
-            new Setting(this.listEl)
-                .setName(tag.nested_name)
-                .addToggle(toggle => toggle
-                    .setValue(this.isTagSelected(tag.id))
-                    .onChange(value => {
-                        this.handleTagToggle(tag.id, value);
-                        this.redraw();
-                    }));
+            const tagSetting = new Setting(this.listEl)
+                .setName(tag.nested_name);
+                
+            // 添加选中状态的类
+            if (this.isTagSelected(tag.id)) {
+                tagSetting.settingEl.addClass('is-selected');
+            }
+            
+            // 添加点击事件
+            tagSetting.settingEl.addEventListener('click', () => {
+                const isCurrentlySelected = this.isTagSelected(tag.id);
+                this.handleTagToggle(tag.id, !isCurrentlySelected);
+                this.redraw();
+            });
+            
+            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+            tagSetting.addToggle(toggle => toggle
+                .setValue(this.isTagSelected(tag.id))
+                .onChange(value => {
+                    this.handleTagToggle(tag.id, value);
+                    this.redraw();
+                }));
         });
     }
     

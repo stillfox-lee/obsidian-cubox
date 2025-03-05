@@ -105,37 +105,77 @@ export class TypeSelectModal extends Modal {
         this.listEl.empty();
         
         // 添加"All Items"选项
-        new Setting(this.listEl)
-            .addToggle(toggle => toggle
-                .setValue(this.selectedTypes.has(this.allItemsId))
-                .onChange(value => {
-                    if (value) {
-                        // 选中"All Items"时，选中所有类型
-                        this.selectedTypes.add(this.allItemsId);
-                        this.types.forEach(type => {
-                            this.selectedTypes.add(type.id);
-                        });
-                    } else {
-                        // 取消选中"All Items"时，取消选中所有类型
-                        this.selectedTypes.delete(this.allItemsId);
-                        this.types.forEach(type => {
-                            this.selectedTypes.delete(type.id);
-                        });
-                    }
-                    this.redraw();
-                }))
+        const allItemsSetting = new Setting(this.listEl)
             .setName('All Items');
+            
+        // 添加选中状态的类
+        if (this.selectedTypes.has(this.allItemsId)) {
+            allItemsSetting.settingEl.addClass('is-selected');
+        }
+        
+        // 添加点击事件
+        allItemsSetting.settingEl.addEventListener('click', () => {
+            const isCurrentlySelected = this.selectedTypes.has(this.allItemsId);
+            if (!isCurrentlySelected) {
+                // 选中"All Items"时，选中所有类型
+                this.selectedTypes.add(this.allItemsId);
+                this.types.forEach(type => {
+                    this.selectedTypes.add(type.id);
+                });
+            } else {
+                // 取消选中"All Items"时，取消选中所有类型
+                this.selectedTypes.delete(this.allItemsId);
+                this.types.forEach(type => {
+                    this.selectedTypes.delete(type.id);
+                });
+            }
+            this.redraw();
+        });
+        
+        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+        allItemsSetting.addToggle(toggle => toggle
+            .setValue(this.selectedTypes.has(this.allItemsId))
+            .onChange(value => {
+                if (value) {
+                    // 选中"All Items"时，选中所有类型
+                    this.selectedTypes.add(this.allItemsId);
+                    this.types.forEach(type => {
+                        this.selectedTypes.add(type.id);
+                    });
+                } else {
+                    // 取消选中"All Items"时，取消选中所有类型
+                    this.selectedTypes.delete(this.allItemsId);
+                    this.types.forEach(type => {
+                        this.selectedTypes.delete(type.id);
+                    });
+                }
+                this.redraw();
+            }));
         
         // 添加每个类型的选项
         this.types.forEach(type => {
-            new Setting(this.listEl)
-                .addToggle(toggle => toggle
-                    .setValue(this.selectedTypes.has(type.id))
-                    .onChange(value => {
-                        this.handleTypeToggle(type.id, value);
-                        this.redraw();
-                    }))
+            const typeSetting = new Setting(this.listEl)
                 .setName(type.name);
+                
+            // 添加选中状态的类
+            if (this.selectedTypes.has(type.id)) {
+                typeSetting.settingEl.addClass('is-selected');
+            }
+            
+            // 添加点击事件
+            typeSetting.settingEl.addEventListener('click', () => {
+                const isCurrentlySelected = this.selectedTypes.has(type.id);
+                this.handleTypeToggle(type.id, !isCurrentlySelected);
+                this.redraw();
+            });
+            
+            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+            typeSetting.addToggle(toggle => toggle
+                .setValue(this.selectedTypes.has(type.id))
+                .onChange(value => {
+                    this.handleTypeToggle(type.id, value);
+                    this.redraw();
+                }));
         });
     }
 

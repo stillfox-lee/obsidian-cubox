@@ -83,14 +83,28 @@ export class StatusSelectModal extends Modal {
         
         // 添加每个状态的选项
         this.statuses.forEach(status => {
-            new Setting(this.listEl)
-                .addToggle(toggle => toggle
-                    .setValue(this.selectedStatuses.has(status.id))
-                    .onChange(value => {
-                        this.handleStatusToggle(status.id, value);
-                        this.redraw();
-                    }))
+            const statusSetting = new Setting(this.listEl)
                 .setName(status.name);
+                
+            // 添加选中状态的类
+            if (this.selectedStatuses.has(status.id)) {
+                statusSetting.settingEl.addClass('is-selected');
+            }
+            
+            // 添加点击事件
+            statusSetting.settingEl.addEventListener('click', () => {
+                const isCurrentlySelected = this.selectedStatuses.has(status.id);
+                this.handleStatusToggle(status.id, !isCurrentlySelected);
+                this.redraw();
+            });
+            
+            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
+            statusSetting.addToggle(toggle => toggle
+                .setValue(this.selectedStatuses.has(status.id))
+                .onChange(value => {
+                    this.handleStatusToggle(status.id, value);
+                    this.redraw();
+                }));
         });
     }
 
