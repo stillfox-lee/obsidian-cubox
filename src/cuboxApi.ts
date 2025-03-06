@@ -1,32 +1,34 @@
 import { Notice } from 'obsidian';
 import { formatISODateTime } from './utils';
+import { ALL_FOLDERS_ID } from './modal/folderSelectModal';
+import { ALL_TAGS_ID } from './modal/tagSelectModal';
+import { ALL_STATUS_ID } from './modal/statusSelectModal';
 
 export interface CuboxArticle {
-    cardId: string;
-    id: string; // 兼容原有接口
+    id: string; 
     title: string;
+    article_title: string;
     description: string;
     url: string;
     domain: string;
-    contentId: string;
-    coverKey: string;
-    isArchived: boolean;
-    hasStar: boolean;
-    createTime: string;
-    updateTime: string;
+    create_time: string;
+    update_time: string;
+    word_count: number;
     content?: string;
+    cubox_url: string;
     highlights?: CuboxHighlight[];
     tags?: string[];
-    folder?: string;
-    type?: string;
+    type: string;
 }
 
 export interface CuboxHighlight {
     id: string;
     text: string;
+    image_url?: string;
+    cubox_url: string;
     note?: string;
-    color?: string;
-    createDate: string;
+    color: string;
+    create_time: string;
 }
 
 export interface CuboxApiOptions {
@@ -51,9 +53,7 @@ export interface CuboxTag {
 interface ListResponse {
     code: number;
     message: string;
-    data: {
-        list: CuboxArticle[];
-    };
+    data: CuboxArticle[];
 }
 
 interface ContentResponse {
@@ -84,13 +84,6 @@ export class CuboxApi {
     }
 
     /**
-     * 更新 API Key
-     */
-    updateApiKey(apiKey: string): void {
-        this.apiKey = apiKey;
-    }
-
-    /**
      * 同时更新域名和 API Key
      */
     updateConfig(options: CuboxApiOptions): void {
@@ -104,7 +97,7 @@ export class CuboxApi {
     async testConnection(): Promise<boolean> {
         try {
             // 尝试获取一篇文章来测试连接
-            const result = await this.getArticles({ lastCardId: null, pageSize: 1 });
+            const result = await this.getArticles({ lastCardId: null});
             new Notice('测试 Cubox 连接成功');
             return true;
         } catch (error) {
@@ -143,61 +136,70 @@ export class CuboxApi {
     async getArticles(
         params: { 
             lastCardId: string | null; 
-            pageSize?: number;
             folderFilter?: string[];
             typeFilter?: string[];
             statusFilter?: string[];
             tagsFilter?: string[];
+            isRead?: boolean;
+            isStarred?: boolean;
+            isAnnotated?: boolean;
         } = { lastCardId: null }
     ): Promise<{ articles: CuboxArticle[], hasMore: boolean, lastCardId: string | null }> {
         try {
-            const searchParams = new URLSearchParams();
-            const pageSize = params.pageSize || 50;
+            // 创建请求体对象而不是URL参数
+            const requestBody: Record<string, any> = {
+                limit: 50
+            };
+            
+            const pageSize = 50;
             
             if (params.lastCardId !== null && params.lastCardId.length > 0) {
-                searchParams.append('lastCardId', params.lastCardId);
+                requestBody.lastCardId = params.lastCardId;
             }
-            searchParams.append('pageSize', pageSize.toString());
             
             // 添加文件夹过滤
             if (params.folderFilter && params.folderFilter.length > 0) {
-                params.folderFilter.forEach(folder => {
-                    searchParams.append('folderId', folder);
-                });
+                // 检查是否包含 ALL_FOLDERS_ID，如果包含则不添加文件夹过滤
+                const hasAllFoldersId = params.folderFilter.includes(ALL_FOLDERS_ID);
+                if (!hasAllFoldersId) {
+                    requestBody.group_filters = params.folderFilter;
+                }
             }
             
             // 添加类型过滤
             if (params.typeFilter && params.typeFilter.length > 0) {
-                params.typeFilter.forEach(type => {
-                    searchParams.append('type', type);
-                });
+                requestBody.type_filters = params.typeFilter;
             }
             
             // 添加状态过滤
             if (params.statusFilter && params.statusFilter.length > 0) {
-                // 如果包含 'all'，则不添加状态过滤
-                if (!params.statusFilter.includes('all')) {
-                    if (params.statusFilter.includes('read')) searchParams.append('isRead', 'true');
-                    if (params.statusFilter.includes('starred')) searchParams.append('isStarred', 'true');
-                    if (params.statusFilter.includes('archived')) searchParams.append('isArchived', 'true');
-                    if (params.statusFilter.includes('annotated')) searchParams.append('isAnnotated', 'true');
+                const hasAllStatus = params.statusFilter.includes(ALL_STATUS_ID);
+                if (!hasAllStatus) {
+                    // 使用传入的布尔值参数，只有当参数为true时才添加
+                    if (params.isRead === true) requestBody.read = true;
+                    if (params.isStarred === true) requestBody.starred = true;
+                    if (params.isAnnotated === true) requestBody.annotated = true;
                 }
             }
             
             // 添加标签过滤
             if (params.tagsFilter && params.tagsFilter.length > 0) {
-                params.tagsFilter.forEach(tag => {
-                    // 如果是空字符串，表示"No Tags"
-                    searchParams.append('tagId', tag);
-                });
+                // 检查是否包含 ALL_TAGS_ID，如果包含则不添加标签过滤
+                const hasAllTagsId = params.tagsFilter.includes(ALL_TAGS_ID);
+                if (!hasAllTagsId) {
+                    requestBody.tag_filters = params.tagsFilter;
+                }
             }
 
-            const path = `/c/api/third-party/card/list?${searchParams.toString()}`;
-            const response = await this.request(path) as ListResponse;
+            const path = `/c/api/third-party/card/filter`;
+            const response = await this.request(path, {
+                method: 'POST',
+                body: JSON.stringify(requestBody)
+            }) as ListResponse;
             
-            const articles = response.data.list;
+            const articles = response.data;
             const hasMore = articles.length >= pageSize;
-            const lastCardId = articles.length > 0 ? articles[articles.length - 1].cardId : null;
+            const lastCardId = articles.length > 0 ? articles[articles.length - 1].id : null;
 
             return {
                 articles,
@@ -216,7 +218,7 @@ export class CuboxApi {
      */
     async getArticleDetail(articleId: string): Promise<string | null> {
         try {
-            const path = `/c/api/third-party/card/content?cardId=${articleId}`;
+            const path = `/c/api/third-party/card/content?id=${articleId}`;
             const response = await this.request(path) as ContentResponse;
             
             // 直接返回文章内容

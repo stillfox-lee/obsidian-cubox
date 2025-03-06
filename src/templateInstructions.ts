@@ -4,11 +4,11 @@ Enter template for creating synced article file name.
 <div class="cubox-variables-container">
     <div class="cubox-variables-title">Available variables</div>
     <ul class="cubox-variables-list">
-        <li>{{card_title}}</li>
+        <li>{{title}}</li>
         <li>{{article_title}}</li>
-        <li>{{date_saved}}</li>
-        <li>{{date_updated}}</li>
-        <li>{{site_domain}}</li>
+        <li>{{create_time}}</li>
+        <li>{{update_time}}</li>
+        <li>{{domain}}</li>
         <li>{{type}}</li>
     </ul>
     <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>
@@ -21,13 +21,13 @@ Enter the metadata separated by comma. you can also use custom aliases in the fo
 <div class="cubox-variables-container">
     <div class="cubox-variables-title">Available variables</div>
     <ul class="cubox-variables-list">
-        <li>card_title</li>
+        <li>title</li>
         <li>article_title</li>
         <li>tags</li>
-        <li>date_saved</li>
-        <li>date_updated</li>
-        <li>site_domain</li>
-        <li>original_url</li>
+        <li>create_time</li>
+        <li>update_time</li>
+        <li>domain</li>
+        <li>url</li>
         <li>cubox_url</li>
         <li>description</li>
         <li>words_count</li>
@@ -45,7 +45,7 @@ Enter template for creating synced article content.
     <div class="cubox-variables-title">Available variables</div>
     <ul class="cubox-variables-list">
         <li>{{id}}</li>
-        <li>{{card_title}}</li>
+        <li>{{title}}</li>
         <li>{{description}}</li>
         <li>{{article_title}}</li>
         <li>{{content}}</li>
@@ -63,12 +63,11 @@ Enter template for creating synced article content.
             </ul>
         </li>
         <li>{{tags}}</li>
-        <li>{{date_saved}}</li>
-        <li>{{date_updated}}</li>
-        <li>{{site_domain}}</li>
-        <li>{{original_url}}</li>
+        <li>{{create_time}}</li>
+        <li>{{update_time}}</li>
+        <li>{{domain}}</li>
+        <li>{{url}}</li>
         <li>{{cubox_url}}</li>
-        <li>{{description}}</li>
         <li>{{words_count}}</li>
     </ul>
     <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>

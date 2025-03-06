@@ -30,22 +30,24 @@ export class TemplateProcessor {
         
         // 替换所有支持的模板字段
         if (article.title) {
-            filename = filename.replace(/{{{card_title}}}/g, article.title);
-            filename = filename.replace(/{{{article_title}}}/g, article.title);
+            filename = filename.replace(/{{{title}}}/g, article.title);
         }
-        
-        const createDate = article.createTime ? formatISODateTime(article.createTime, this.dateFormat) : '';
+        if (article.article_title) {
+            filename = filename.replace(/{{{article_title}}}/g, article.article_title); 
+        }
+
+        const createDate = article.create_time ? formatISODateTime(article.create_time, this.dateFormat) : '';
         if (createDate) {
-            filename = filename.replace(/{{{date_saved}}}/g, createDate);
+            filename = filename.replace(/{{{create_time}}}/g, createDate);
         }
         
-        const updateDate = article.updateTime ? formatISODateTime(article.updateTime, this.dateFormat) : '';
+        const updateDate = article.update_time ? formatISODateTime(article.update_time, this.dateFormat) : '';
         if (updateDate) {
-            filename = filename.replace(/{{{date_updated}}}/g, updateDate);
+            filename = filename.replace(/{{{update_time}}}/g, updateDate);
         }
         
         if (article.domain) {
-            filename = filename.replace(/{{{site_domain}}}/g, article.domain);
+            filename = filename.replace(/{{{domain}}}/g, article.domain);
         }
         
         if (article.type) {
@@ -161,7 +163,7 @@ export class TemplateProcessor {
      */
     private prepareTemplateData(article: CuboxArticle): any {
         // 格式化日期
-        const createDate = article.createTime || '';
+        const createDate = article.create_time || '';
         const formattedDate = createDate ? formatISODateTime(createDate, this.dateFormat) : '';
         
         // 格式化高亮内容

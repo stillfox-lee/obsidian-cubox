@@ -3,7 +3,7 @@ import { CuboxFolder } from '../cuboxApi';
 import { ModalStyleManager } from '../utils/modalStyles';
 
 // 定义一个虚拟的 ALL 文件夹 ID
-const ALL_FOLDERS_ID = 'all_folders';
+export const ALL_FOLDERS_ID = 'all_folders';
 
 export class FolderSelectModal extends Modal {
     private selectedFolders: Set<string> = new Set();
@@ -58,9 +58,15 @@ export class FolderSelectModal extends Modal {
         // 确认按钮
         const confirmButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
         confirmButton.addEventListener('click', () => {
+            // 检查是否至少选择了一个选项
+            if (this.selectedFolders.size === 0) {
+                new Notice('Please select at least one option.');
+                return;
+            }
+            
             // 如果选中了ALL_FOLDERS_ID，则传递空数组表示同步所有内容
             const resultFolders = this.selectedFolders.has(ALL_FOLDERS_ID) 
-                ? [] 
+                ? [ALL_FOLDERS_ID] 
                 : Array.from(this.selectedFolders);
             
             this.onConfirm(resultFolders);
@@ -113,21 +119,26 @@ export class FolderSelectModal extends Modal {
             const folderSetting = new Setting(this.listEl)
                 .setName(folder.nested_name);
                 
-            // 添加选中状态的类
-            if (this.isFolderSelected(folder.id)) {
-                folderSetting.settingEl.addClass('is-selected');
+            // 如果"All Items"被选中，禁用其他选项
+            if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
+                folderSetting.settingEl.addClass('is-disabled');
+            } else {
+                // 添加选中状态的类
+                if (this.selectedFolders.has(folder.id)) {
+                    folderSetting.settingEl.addClass('is-selected');
+                }
+                
+                // 添加点击事件
+                folderSetting.settingEl.addEventListener('click', () => {
+                    const isCurrentlySelected = this.selectedFolders.has(folder.id);
+                    this.handleFolderToggle(folder.id, !isCurrentlySelected);
+                    this.redraw();
+                });
             }
-            
-            // 添加点击事件
-            folderSetting.settingEl.addEventListener('click', () => {
-                const isCurrentlySelected = this.isFolderSelected(folder.id);
-                this.handleFolderToggle(folder.id, !isCurrentlySelected);
-                this.redraw();
-            });
             
             // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
             folderSetting.addToggle(toggle => toggle
-                .setValue(this.isFolderSelected(folder.id))
+                .setValue(this.selectedFolders.has(folder.id))
                 .onChange(value => {
                     this.handleFolderToggle(folder.id, value);
                     this.redraw();
@@ -136,11 +147,7 @@ export class FolderSelectModal extends Modal {
     }
     
     private isFolderSelected(folderId: string): boolean {
-        // 如果选中了ALL_FOLDERS_ID，则所有文件夹都被选中
-        if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
-            return true;
-        }
-        // 否则检查特定文件夹是否被选中
+        // 检查特定文件夹是否被选中
         return this.selectedFolders.has(folderId);
     }
 
@@ -151,11 +158,9 @@ export class FolderSelectModal extends Modal {
                 this.selectedFolders.clear();
                 this.selectedFolders.add(ALL_FOLDERS_ID);
             } else {
-                // 如果取消了"All Items"且没有其他选择，选中第一个文件夹
+                // 如果取消了"All Items"，清除它
                 this.selectedFolders.delete(ALL_FOLDERS_ID);
-                if (this.selectedFolders.size === 0 && this.folders.length > 0) {
-                    this.selectedFolders.add(this.folders[0].id);
-                }
+                // 不自动选择其他文件夹，让用户自己选择
             }
         } else {
             if (isSelected) {
@@ -163,44 +168,11 @@ export class FolderSelectModal extends Modal {
                 this.selectedFolders.delete(ALL_FOLDERS_ID);
                 // 添加新选择的文件夹
                 this.selectedFolders.add(folderId);
-                
-                // 检查是否所有文件夹都被选中，如果是，自动选中"All Items"
-                if (this.areAllFoldersSelected()) {
-                    this.selectedFolders.clear();
-                    this.selectedFolders.add(ALL_FOLDERS_ID);
-                }
             } else {
-                // 修复：如果当前是"All Items"模式，需要特殊处理
-                if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
-                    // 从"All Items"模式切换到选择除当前文件夹外的所有文件夹
-                    this.selectedFolders.clear();
-                    
-                    // 添加除当前文件夹外的所有文件夹
-                    this.folders.forEach(folder => {
-                        if (folder.id !== folderId) {
-                            this.selectedFolders.add(folder.id);
-                        }
-                    });
-                } else {
-                    // 正常移除取消选择的文件夹
-                    this.selectedFolders.delete(folderId);
-                    
-                    // 如果没有任何选择，默认选中"All Items"
-                    if (this.selectedFolders.size === 0) {
-                        this.selectedFolders.add(ALL_FOLDERS_ID);
-                    }
-                }
+                // 移除取消选择的文件夹
+                this.selectedFolders.delete(folderId);
             }
         }
-    }
-    
-    // 检查是否所有文件夹都被选中
-    private areAllFoldersSelected(): boolean {
-        // 如果没有文件夹，返回false
-        if (this.folders.length === 0) return false;
-        
-        // 检查每个文件夹是否都在selectedFolders中
-        return this.folders.every(folder => this.selectedFolders.has(folder.id));
     }
     
     private redraw() {

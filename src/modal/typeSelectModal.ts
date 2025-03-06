@@ -1,33 +1,26 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { ModalStyleManager } from '../utils/modalStyles';
 
-export interface ContentType {
-    id: string;
-    name: string;
-}
+// 定义所有可用的内容类型（首字母大写）
+export const ALL_CONTENT_TYPES = [
+    'Article',
+    'Snippet',
+    'Memo',
+    'Image',
+    'Audio',
+    'Video',
+    'File'
+];
 
 export class TypeSelectModal extends Modal {
     private onSave: (selectedTypes: string[]) => void;
     private selectedTypes: Set<string> = new Set();
     private listEl: HTMLElement;
-    private allItemsId: string = 'all';
-    
-    // 定义可用的类型
-    private types = [
-        { id: 'article', name: 'Article' },
-        { id: 'snippet', name: 'Snippet' },
-        { id: 'memo', name: 'Memo' },
-        { id: 'image', name: 'Image' },
-        { id: 'audio', name: 'Audio' },
-        { id: 'video', name: 'Video' },
-        { id: 'file', name: 'File' }
-    ];
+    private footerEl: HTMLElement;
 
     constructor(app: App, initialSelected: string[] = [], onSave: (selectedTypes: string[]) => void) {
         super(app);
         this.onSave = onSave;
-        
-        console.log('TypeSelectModal constructor called with initialSelected:', initialSelected);
         
         // 初始化已选择的类型
         if (initialSelected && initialSelected.length > 0) {
@@ -35,20 +28,10 @@ export class TypeSelectModal extends Modal {
             initialSelected.forEach(id => {
                 if (id) this.selectedTypes.add(id);
             });
-            
-            // 检查是否所有类型都被选中，如果是则也选中"All Items"
-            const allTypesSelected = this.types.every(type => 
-                initialSelected.includes(type.id)
-            );
-            
-            if (allTypesSelected) {
-                this.selectedTypes.add(this.allItemsId);
-            }
         } else {
-            // 如果没有初始选择，默认选中"All Items"和所有类型
-            this.selectedTypes.add(this.allItemsId);
-            this.types.forEach(type => {
-                this.selectedTypes.add(type.id);
+            // 如果没有初始选择，默认选中所有类型
+            ALL_CONTENT_TYPES.forEach(type => {
+                this.selectedTypes.add(type);
             });
         }
     }
@@ -64,25 +47,29 @@ export class TypeSelectModal extends Modal {
         // 创建类型列表容器
         this.listEl = contentEl.createDiv({ cls: 'type-list-container' });
         
+        // 创建底部按钮容器
+        this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
+        
         // 创建类型列表
         this.createTypeList();
         
-        // 添加底部按钮容器 - 使用与 StatusSelectModal 相同的类名
-        const footerEl = contentEl.createDiv({ cls: 'modal-footer' });
-        
         // 添加取消按钮
-        const cancelButton = footerEl.createEl('button', { text: '取消' });
+        const cancelButton = this.footerEl.createEl('button', { text: '取消' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
         // 添加保存按钮
-        const saveButton = footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
+        const saveButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
-            // 过滤掉"All Items"，只保留实际类型
-            const selectedTypes = Array.from(this.selectedTypes)
-                .filter(id => id !== this.allItemsId);
+            // 检查是否至少选择了一个选项
+            if (this.selectedTypes.size === 0) {
+                new Notice('Please select at least one option.');
+                return;
+            }
             
+            // 返回选中的类型
+            const selectedTypes = Array.from(this.selectedTypes);
             this.onSave(selectedTypes);
             this.close();
         });
@@ -98,103 +85,47 @@ export class TypeSelectModal extends Modal {
             'cubox-type-select-modal',
             'type-list-container'
         );
+        
+        // 添加额外的样式，覆盖第一行字体加粗的样式
+        const styleEl = document.createElement('style');
+        styleEl.id = 'cubox-type-modal-additional-styles';
+        styleEl.textContent = `
+            /* 覆盖第一行字体加粗的样式 */
+            .type-list-container .setting-item:first-child .setting-item-name {
+                font-weight: normal;
+            }
+        `;
+        document.head.appendChild(styleEl);
     }
 
     private createTypeList() {
         // 清除现有列表
         this.listEl.empty();
         
-        // 添加"All Items"选项
-        const allItemsSetting = new Setting(this.listEl)
-            .setName('All Items');
-            
-        // 添加选中状态的类
-        if (this.selectedTypes.has(this.allItemsId)) {
-            allItemsSetting.settingEl.addClass('is-selected');
-        }
-        
-        // 添加点击事件
-        allItemsSetting.settingEl.addEventListener('click', () => {
-            const isCurrentlySelected = this.selectedTypes.has(this.allItemsId);
-            if (!isCurrentlySelected) {
-                // 选中"All Items"时，选中所有类型
-                this.selectedTypes.add(this.allItemsId);
-                this.types.forEach(type => {
-                    this.selectedTypes.add(type.id);
-                });
-            } else {
-                // 取消选中"All Items"时，取消选中所有类型
-                this.selectedTypes.delete(this.allItemsId);
-                this.types.forEach(type => {
-                    this.selectedTypes.delete(type.id);
-                });
-            }
-            this.redraw();
-        });
-        
-        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-        allItemsSetting.addToggle(toggle => toggle
-            .setValue(this.selectedTypes.has(this.allItemsId))
-            .onChange(value => {
-                if (value) {
-                    // 选中"All Items"时，选中所有类型
-                    this.selectedTypes.add(this.allItemsId);
-                    this.types.forEach(type => {
-                        this.selectedTypes.add(type.id);
-                    });
-                } else {
-                    // 取消选中"All Items"时，取消选中所有类型
-                    this.selectedTypes.delete(this.allItemsId);
-                    this.types.forEach(type => {
-                        this.selectedTypes.delete(type.id);
-                    });
-                }
-                this.redraw();
-            }));
-        
         // 添加每个类型的选项
-        this.types.forEach(type => {
+        ALL_CONTENT_TYPES.forEach(typeId => {
             const typeSetting = new Setting(this.listEl)
-                .setName(type.name);
+                .setName(typeId);
                 
             // 添加选中状态的类
-            if (this.selectedTypes.has(type.id)) {
+            if (this.selectedTypes.has(typeId)) {
                 typeSetting.settingEl.addClass('is-selected');
             }
             
             // 添加点击事件
             typeSetting.settingEl.addEventListener('click', () => {
-                const isCurrentlySelected = this.selectedTypes.has(type.id);
-                this.handleTypeToggle(type.id, !isCurrentlySelected);
+                const isCurrentlySelected = this.selectedTypes.has(typeId);
+                this.handleTypeToggle(typeId, !isCurrentlySelected);
                 this.redraw();
             });
-            
-            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-            typeSetting.addToggle(toggle => toggle
-                .setValue(this.selectedTypes.has(type.id))
-                .onChange(value => {
-                    this.handleTypeToggle(type.id, value);
-                    this.redraw();
-                }));
         });
     }
 
     private handleTypeToggle(typeId: string, isSelected: boolean) {
         if (isSelected) {
             this.selectedTypes.add(typeId);
-            
-            // 检查是否所有类型都被选中
-            const allTypesSelected = this.types.every(type => 
-                this.selectedTypes.has(type.id)
-            );
-            
-            // 不再自动选中"All Items"，即使所有类型都被选中
-            // 只有当用户手动选择"All Items"时才选中它
         } else {
             this.selectedTypes.delete(typeId);
-            
-            // 如果有任何类型未被选中，取消选中"All Items"
-            this.selectedTypes.delete(this.allItemsId);
         }
     }
 
@@ -208,5 +139,9 @@ export class TypeSelectModal extends Modal {
         
         // 使用通用样式管理器移除样式
         ModalStyleManager.removeModalStyles('cubox-modal-styles');
+        
+        // 移除额外的样式
+        const additionalStyleEl = document.getElementById('cubox-type-modal-additional-styles');
+        if (additionalStyleEl) additionalStyleEl.remove();
     }
 } 

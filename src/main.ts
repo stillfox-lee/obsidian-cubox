@@ -2,11 +2,12 @@ import { addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettin
 import { CuboxApi, CuboxApiOptions } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatISODateTime, getCurrentFormattedTime } from './utils';
-import { FolderSelectModal } from './modal/folderSelectModal';
+import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
 import { filenameTemplateInstructions, metadataTemplateInstructions, contentTemplateInstructions } from './templateInstructions';
-import { TypeSelectModal } from './modal/typeSelectModal';
+import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { StatusSelectModal } from './modal/statusSelectModal';
-import { TagSelectModal } from './modal/tagSelectModal';
+import { ALL_TAGS_ID, TagSelectModal } from './modal/tagSelectModal';
+import { ALL_STATUS_ID } from './modal/statusSelectModal';
 
 interface CuboxSyncSettings {
 	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
@@ -14,7 +15,10 @@ interface CuboxSyncSettings {
 	folderFilter: string[];
 	typeFilter: string[];
 	statusFilter: string[];
-	tagsFilter: string[]; // 添加标签过滤
+	isRead: boolean;
+	isStarred: boolean;
+	isAnnotated: boolean;
+	tagsFilter: string[]; 
 	syncFrequency: number;
 	targetFolder: string;
 	filenameTemplate: string;
@@ -24,26 +28,29 @@ interface CuboxSyncSettings {
 	dateFormat: string;
 	lastSyncTime: number;
 	lastSyncCardId: string | null;
-	syncing: boolean; // 添加同步状态标志
+	syncing: boolean;
 }
 
 const DEFAULT_SETTINGS: CuboxSyncSettings = {
-	domain: '', // 默认为空，表示未选择
+	domain: '', 
 	apiKey: '',
-	folderFilter: [],
-	typeFilter: [],
-	statusFilter: ['all'],
-	tagsFilter: [], // 默认为空数组，表示同步所有标签
+	folderFilter: [ALL_FOLDERS_ID],
+	typeFilter: ALL_CONTENT_TYPES,
+	statusFilter: [ALL_STATUS_ID],
+	isRead: true,
+	isStarred: true,
+	isAnnotated: true,
+	tagsFilter: [ALL_TAGS_ID],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
-	filenameTemplate: '{{cardTitle}}-{{createDate}}',
-	frontMatterTemplate: 'title: {{cardTitle}}\nurl: {{url}}\ndate: {{createDate}}',
-	contentTemplate: '# {{cardTitle}}\n\n{{{content}}}\n\n## Highlights\n{{#highlightsList}}\n- {{{text}}}\n{{/highlightsList}}',
+	filenameTemplate: '{{title}}-{{create_time}}',
+	frontMatterTemplate: 'id: {{{id}}}',
+	contentTemplate: '# {{{title}}}\n\n{{{description}}}\n\n[Read in Cubox]({{{cubox_url}}})\n[Read Original]({{{url}}})\n\n{{#highlights.length}}\n## Annotations\n\n{{#highlights}}\n> {{{highlight_text}}}\n{{{highlight_note}}}\n[Link️]({{{highlight_url}}})\n\n{{/highlights}}\n{{/highlights.length}}',
 	highlightInContent: true,
 	dateFormat: 'YYYY-MM-dd',
 	lastSyncTime: 0,
 	lastSyncCardId: null,
-	syncing: false // 默认为非同步状态
+	syncing: false 
 }
 
 export default class CuboxSyncPlugin extends Plugin {
@@ -119,18 +126,10 @@ export default class CuboxSyncPlugin extends Plugin {
 		
 		// 更新 API 配置
 		if (this.cuboxApi) {
-			// 检查域名或 API Key 是否发生变化
-			const domainChanged = oldSettings.domain !== this.settings.domain;
-			const apiKeyChanged = oldSettings.apiKey !== this.settings.apiKey;
-			
-			// 如果任一配置发生变化，则更新
-			if (domainChanged || apiKeyChanged) {
-				// 同时更新域名和 API Key
-				this.cuboxApi.updateConfig({
-					domain: this.settings.domain,
-					apiKey: this.settings.apiKey
-				});
-			}
+			this.cuboxApi.updateConfig({
+				domain: this.settings.domain,
+				apiKey: this.settings.apiKey
+			});
 		} else {
 			// 如果实例不存在，创建新实例
 			this.cuboxApi = new CuboxApi({
@@ -161,7 +160,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		}
 	}
 
-	async syncCubox(continueLastSync: boolean = false) {
+	async syncCubox(continueLastSync: boolean = true) {
 		// 如果已经在同步中，则跳过
 		if (this.settings.syncing) {
 			new Notice('同步已在进行中，请等待当前同步完成');
@@ -177,15 +176,6 @@ export default class CuboxSyncPlugin extends Plugin {
 			const statusBarItemEl = this.addStatusBarItem();
 			statusBarItemEl.setText(`正在同步 Cubox...`);
 			
-			// 测试连接
-			const isConnected = await this.cuboxApi.testConnection();
-			if (!isConnected) {
-				this.settings.syncing = false;
-				await this.saveSettings();
-				statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()}`);
-				return;
-			}
-			
 			// 确保目标文件夹存在
 			await this.ensureTargetFolder();
 			
@@ -196,7 +186,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			
 			// 分页获取所有文章
 			while (hasMore) {
-				// 获取文章列表
+				// 获取文章列表，传递状态布尔值
 				const result = await this.cuboxApi.getArticles(
 					{
 						lastCardId: lastCardId,
@@ -204,6 +194,9 @@ export default class CuboxSyncPlugin extends Plugin {
 						typeFilter: this.settings.typeFilter,
 						statusFilter: this.settings.statusFilter,
 						tagsFilter: this.settings.tagsFilter,
+						isRead: this.settings.isRead,
+						isStarred: this.settings.isStarred,
+						isAnnotated: this.settings.isAnnotated,
 					}
 				);
 				
@@ -216,17 +209,13 @@ export default class CuboxSyncPlugin extends Plugin {
 				// 处理每篇文章
 				for (const article of articles) {
 					// 获取文章内容
-					const content = await this.cuboxApi.getArticleDetail(article.cardId);
+					const content = await this.cuboxApi.getArticleDetail(article.id);
 					if (content === null) continue;
-					
-					// 获取高亮内容
-					const highlights = await this.cuboxApi.getHighlights(article.cardId);
 					
 					// 合并文章基本信息、内容和高亮
 					const fullArticle = {
 						...article,
-						content: content,
-						highlights: highlights
+						content: content
 					};
 					
 					// 处理文件名和内容
@@ -240,17 +229,17 @@ export default class CuboxSyncPlugin extends Plugin {
 						fullArticle
 					);
 					
-					const contentTemplate = this.templateProcessor.processContentTemplate(
-						this.settings.contentTemplate,
-						fullArticle
-					);
+					// const contentTemplate = this.templateProcessor.processContentTemplate(
+					// 	this.settings.contentTemplate,
+					// 	fullArticle
+					// );
 					
 					// 组合最终内容
 					let finalContent = '';
 					if (frontMatter) {
 						finalContent = `---\n${frontMatter}\n---\n\n`;
 					}
-					finalContent += contentTemplate;
+					finalContent += fullArticle.content;
 					
 					// 创建或更新文件
 					const filePath = `${this.settings.targetFolder}/${filename}.md`;
@@ -428,6 +417,8 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						// 恢复按钮文本
 						button.setButtonText(this.getFolderFilterButtonText());
 					}
+
+					button.setButtonText(this.getFolderFilterButtonText());
 				}));
 
 		new Setting(containerEl)
@@ -469,6 +460,8 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						// 恢复按钮文本
 						button.setButtonText(this.getTagFilterButtonText());
 					}
+
+					button.setButtonText(this.getTagFilterButtonText());
 				}));
 
 		new Setting(containerEl)
@@ -511,12 +504,24 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						return;
 					}
 					
+					// 创建状态值对象
+					const statusValues = {
+						read: this.plugin.settings.isRead,
+						starred: this.plugin.settings.isStarred,
+						annotated: this.plugin.settings.isAnnotated
+					};
+					
 					// 打开状态选择模态框
 					const modal = new StatusSelectModal(
 						this.app, 
 						this.plugin.settings.statusFilter,
-						async (selectedStatuses) => {
+						statusValues,
+						async (selectedStatuses, newStatusValues) => {
 							this.plugin.settings.statusFilter = selectedStatuses;
+							// 更新状态布尔值
+							this.plugin.settings.isRead = newStatusValues.read;
+							this.plugin.settings.isStarred = newStatusValues.starred;
+							this.plugin.settings.isAnnotated = newStatusValues.annotated;
 							await this.plugin.saveSettings();
 							// 更新按钮文本
 							button.setButtonText(this.getStatusFilterButtonText());
@@ -695,11 +700,13 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 	// 获取文件夹过滤器按钮文本
 	private getFolderFilterButtonText(): string {
-		const count = this.plugin.settings.folderFilter.length;
-		if (count === 0) {
+		const folderFilters = this.plugin.settings.folderFilter;
+		if (!folderFilters || folderFilters.length === 0) {
 			return 'Manage';
+		} else if (folderFilters.includes(ALL_FOLDERS_ID)) {
+			return 'All Folders';
 		} else {
-			return `已选择 ${count} 个文件夹`;
+			return `已选择 ${folderFilters.length} 个文件夹`;
 		}
 	}
 
@@ -708,32 +715,18 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		const typeFilters = this.plugin.settings.typeFilter;
 		if (!typeFilters || typeFilters.length === 0) {
 			return 'Manage';
+		} else if (typeFilters.length === ALL_CONTENT_TYPES.length) {
+			return 'All Types';
 		} else {
-			// 将类型ID转换为可读名称
-			const typeMap: {[key: string]: string} = {
-				'article': 'Article',
-				'snippet': 'Snippet',
-				'memo': 'Memo',
-				'image': 'Image',
-				'audio': 'Audio',
-				'video': 'Video',
-				'file': 'File'
-			};
-			
-			// 如果选择了所有类型，显示"All Types"
-			if (typeFilters.length === Object.keys(typeMap).length) {
-				return 'All Types';
-			}
-			
-			// 否则显示选择的类型数量
 			return `已选择 ${typeFilters.length} 个类型`;
 		}
 	}
 
 	private getStatusFilterButtonText(): string {
 		const statusFilters = this.plugin.settings.statusFilter;
-		if (!statusFilters || statusFilters.length === 0 || 
-			(statusFilters.length === 1 && statusFilters[0] === 'all')) {
+		if (!statusFilters || statusFilters.length === 0) {
+			return 'Manage';
+		} else if (statusFilters.includes('all')) {
 			return 'All Items';
 		} else {
 			return `已选择 ${statusFilters.length} 个状态`;
@@ -741,12 +734,15 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 	}
 
 	private getTagFilterButtonText(): string {
-		if (!this.plugin.settings.tagsFilter || this.plugin.settings.tagsFilter.length === 0) {
+		const tagFilters = this.plugin.settings.tagsFilter;
+		if (!tagFilters || tagFilters.length === 0) {
 			return 'All Tags';
-		} else if (this.plugin.settings.tagsFilter.includes('')) {
+		} else if (tagFilters.includes(ALL_TAGS_ID)) {
+			return 'All Tags';
+		} else if (tagFilters.includes('')) {
 			return 'No Tags';
 		} else {
-			return `${this.plugin.settings.tagsFilter.length} Tags Selected`;
+			return `${tagFilters.length} Tags Selected`;
 		}
 	}
 }

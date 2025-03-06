@@ -56,7 +56,7 @@ export class ModalStyleManager {
                 background-color: var(--background-modifier-hover);
             }
             /* 确保所有设置项的名称垂直居中 */
-            .${listContainerClass} .setting-item .setting-item-name {
+            .${listContainerClass} .setting-item-name {
                 display: flex;
                 align-items: center;
                 padding: 0;
@@ -128,6 +128,30 @@ export class ModalStyleManager {
                 position: relative;
                 top: 6px; /* 微调第一行文本位置 */
                 font-weight: bold; /* 为第一行文字添加加粗样式 */
+            }
+            
+            /* 禁用状态的样式 */
+            .${listContainerClass} .setting-item.is-disabled {
+                opacity: 0.3;
+                pointer-events: none;
+            }
+            
+            /* 添加横线样式用于表示禁用状态的复选框 */
+            .${listContainerClass} .setting-item.is-disabled::before {
+                background-color: var(--background-primary);
+                border-color: var(--background-modifier-border);
+            }
+            
+            .${listContainerClass} .setting-item.is-disabled::after {
+                content: "";
+                position: absolute;
+                width: 8px;
+                height: 2px;
+                background-color: var(--text-muted);
+                left: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                border: none;
             }
             
             /* 确保所有行的高度一致 */

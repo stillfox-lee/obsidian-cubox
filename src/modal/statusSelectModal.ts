@@ -4,24 +4,37 @@ import { ModalStyleManager } from '../utils/modalStyles';
 export interface ContentStatus {
     id: string;
     name: string;
+    value?: boolean;
 }
+
+export const ALL_STATUS_ID = 'all';
 
 export class StatusSelectModal extends Modal {
     private statuses: ContentStatus[] = [
         { id: 'all', name: 'All Items' },
-        { id: 'read', name: 'Already Read Items' },
-        { id: 'starred', name: 'Starred Items' },
-        { id: 'annotated', name: 'Annotated Items' }
+        { id: 'read', name: 'Already read items only', value: true },
+        { id: 'starred', name: 'Starred items only', value: true },
+        { id: 'annotated', name: 'Annotated items only', value: true }
     ];
     private selectedStatuses: Set<string> = new Set();
-    private onSave: (selectedStatuses: string[]) => void;
-    private allItemsId: string = 'all';
+    private statusValues: Map<string, boolean> = new Map();
+    private onSave: (selectedStatuses: string[], statusValues: {[key: string]: boolean}) => void;
     private listEl: HTMLElement;
     private footerEl: HTMLElement;
 
-    constructor(app: App, initialSelected: string[], onSave: (selectedStatuses: string[]) => void) {
+    constructor(app: App, initialSelected: string[], initialValues: {[key: string]: boolean} = {}, 
+                onSave: (selectedStatuses: string[], statusValues: {[key: string]: boolean}) => void) {
         super(app);
         this.onSave = onSave;
+        
+        // 初始化状态值
+        this.statuses.forEach(status => {
+            if (status.id !== 'all') {
+                // 如果有初始值，使用初始值，否则使用默认值
+                const value = initialValues[status.id] !== undefined ? initialValues[status.id] : (status.value || true);
+                this.statusValues.set(status.id, value);
+            }
+        });
         
         // 初始化已选择的状态
         if (initialSelected && initialSelected.length > 0) {
@@ -30,7 +43,7 @@ export class StatusSelectModal extends Modal {
             });
         } else {
             // 如果没有初始选择，默认选中"All Items"
-            this.selectedStatuses.add(this.allItemsId);
+            this.selectedStatuses.add(ALL_STATUS_ID);
         }
     }
 
@@ -58,9 +71,19 @@ export class StatusSelectModal extends Modal {
         // 保存按钮
         const saveButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
-            // 返回选中的状态
+            // 检查是否至少选择了一个选项
+            if (this.selectedStatuses.size === 0) {
+                new Notice('Please select at least one option.');
+                return;
+            }
+            
+            // 返回选中的状态和状态值
             const selectedIds = Array.from(this.selectedStatuses);
-            this.onSave(selectedIds);
+            const statusValues: {[key: string]: boolean} = {};
+            this.statusValues.forEach((value, key) => {
+                statusValues[key] = value;
+            });
+            this.onSave(selectedIds, statusValues);
             this.close();
         });
         
@@ -86,54 +109,75 @@ export class StatusSelectModal extends Modal {
             const statusSetting = new Setting(this.listEl)
                 .setName(status.name);
                 
-            // 添加选中状态的类
-            if (this.selectedStatuses.has(status.id)) {
-                statusSetting.settingEl.addClass('is-selected');
-            }
-            
-            // 添加点击事件
-            statusSetting.settingEl.addEventListener('click', () => {
-                const isCurrentlySelected = this.selectedStatuses.has(status.id);
-                this.handleStatusToggle(status.id, !isCurrentlySelected);
-                this.redraw();
-            });
-            
-            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-            statusSetting.addToggle(toggle => toggle
-                .setValue(this.selectedStatuses.has(status.id))
-                .onChange(value => {
-                    this.handleStatusToggle(status.id, value);
+            // 如果是"All Items"选项
+            if (status.id === ALL_STATUS_ID) {
+                // 添加选中状态的类
+                if (this.selectedStatuses.has(status.id)) {
+                    statusSetting.settingEl.addClass('is-selected');
+                }
+                
+                // 添加点击事件
+                statusSetting.settingEl.addEventListener('click', () => {
+                    const isCurrentlySelected = this.selectedStatuses.has(status.id);
+                    this.handleStatusToggle(status.id, !isCurrentlySelected);
                     this.redraw();
-                }));
+                });
+            } else {
+                // 如果"All Items"被选中，禁用其他选项
+                if (this.selectedStatuses.has(ALL_STATUS_ID)) {
+                    statusSetting.settingEl.addClass('is-disabled');
+                } else {
+                    // 添加选中状态的类
+                    if (this.selectedStatuses.has(status.id)) {
+                        statusSetting.settingEl.addClass('is-selected');
+                    }
+                    
+                    // 添加点击事件
+                    statusSetting.settingEl.addEventListener('click', () => {
+                        const isCurrentlySelected = this.selectedStatuses.has(status.id);
+                        this.handleStatusToggle(status.id, !isCurrentlySelected);
+                        this.redraw();
+                    });
+                }
+            }
         });
     }
 
     private handleStatusToggle(statusId: string, isSelected: boolean) {
-        if (statusId === this.allItemsId) {
+        if (statusId === ALL_STATUS_ID) {
             if (isSelected) {
                 // 如果选择了"All Items"，清除其他所有选择
                 this.selectedStatuses.clear();
-                this.selectedStatuses.add(this.allItemsId);
+                this.selectedStatuses.add(ALL_STATUS_ID);
+                
+                // 当选择 All 时，所有状态值设为 true
+                this.statuses.forEach(status => {
+                    if (status.id !== 'all') {
+                        this.statusValues.set(status.id, true);
+                    }
+                });
             } else {
-                // 如果取消了"All Items"且没有其他选择，重新选中"All Items"
-                if (this.selectedStatuses.size <= 1) {
-                    this.selectedStatuses.clear();
-                    this.selectedStatuses.add(this.allItemsId);
-                }
+                // 如果取消了"All Items"，清除它
+                this.selectedStatuses.delete(ALL_STATUS_ID);
             }
         } else {
             if (isSelected) {
                 // 如果选择了其他选项，移除"All Items"
-                this.selectedStatuses.delete(this.allItemsId);
+                this.selectedStatuses.delete(ALL_STATUS_ID);
                 // 添加新选择的状态
                 this.selectedStatuses.add(statusId);
+                
+                // 将所有状态值设为 false，然后将选中的状态值设为 true
+                this.statuses.forEach(status => {
+                    if (status.id !== 'all') {
+                        this.statusValues.set(status.id, status.id === statusId);
+                    }
+                });
             } else {
                 // 移除取消选择的状态
                 this.selectedStatuses.delete(statusId);
-                // 如果没有任何选择，默认选中"All Items"
-                if (this.selectedStatuses.size === 0) {
-                    this.selectedStatuses.add(this.allItemsId);
-                }
+                // 将该状态值设为 false
+                this.statusValues.set(statusId, false);
             }
         }
     }
