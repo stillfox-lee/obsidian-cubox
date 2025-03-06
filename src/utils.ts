@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon';
+
 // 文件名非法字符正则表达式
 export const ILLEGAL_CHAR_REGEX_FILE = /[<>:"/\\|?*\u0000-\u001F]/g;
 export const ILLEGAL_CHAR_REGEX_FOLDER = /[<>:"\\|?*\u0000-\u001F]/g;
@@ -32,46 +34,60 @@ export const generateSafeFileArticleName = (title: string): string => {
 };
 
 /**
- * 格式化 ISO 时间字符串为可读格式
- * @param isoString ISO 格式的时间字符串
- * @param format 可选的格式化模式
+ * 格式化时间字符串为指定格式
+ * @param dateString 输入的时间字符串
+ * @param format 输出格式，支持：YYYY(年), MM(月), DD(日), HH(时), mm(分), ss(秒)
  * @returns 格式化后的时间字符串
  */
-export const formatISODateTime = (isoString: string, format: string = 'yyyy-MM-dd HH:mm'): string => {
-    if (!isoString) return '';
+export const formatDateTime = (dateString: string, format: string = 'YYYY-MM-DD HH:mm:ss'): string => {
+    if (!dateString) return '';
     
     try {
-        // 直接使用 Date 对象处理时间
-        const date = new Date(isoString);
+        // 预处理输入的时间字符串，处理非标准格式
+        let normalizedString = dateString;
         
-        // 检查日期是否有效
-        if (isNaN(date.getTime())) {
-            return isoString;
-        }
+        // 处理类似 2024-04-23T14:30:42:780+08:00 格式（秒与毫秒之间用冒号）
+        normalizedString = normalizedString.replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})/, '$1:$2:$3.$4');
         
-        // 根据不同格式返回不同的日期字符串
-        if (format === 'yyyy-MM-dd HH:mm' || format === 'YYYY-MM-dd HH:mm') {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            
-            return `${year}-${month}-${day} ${hours}:${minutes}`;
-        } 
-        else if (format === 'yyyy-MM-dd' || format === 'YYYY-MM-dd') {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}`;
-        }
+        return DateTime.fromISO(normalizedString).toFormat('yyyy-MM-dd HH:mm');
         
-        // 默认返回原始字符串
-        return isoString;
+        // // 检查日期是否有效
+        // if (isNaN(date.getTime())) {
+        //     console.warn(`Invalid date string: ${dateString}`);
+        //     return dateString;
+        // }
+        
+        // // 提取日期各部分
+        // const year = date.getFullYear();
+        // const month = date.getMonth() + 1;
+        // const day = date.getDate();
+        // const hours = date.getHours();
+        // const minutes = date.getMinutes();
+        // const seconds = date.getSeconds();
+        
+        // // 格式化各部分，补零
+        // const YYYY = String(year);
+        // const YY = String(year).slice(-2);
+        // const MM = String(month).padStart(2, '0');
+        // const DD = String(day).padStart(2, '0');
+        // const HH = String(hours).padStart(2, '0');
+        // const mm = String(minutes).padStart(2, '0');
+        // const ss = String(seconds).padStart(2, '0');
+        
+        // // 使用正则表达式替换格式字符串中的占位符
+        // let result = format
+        //     .replace(/YYYY/g, YYYY)
+        //     .replace(/YY/g, YY)
+        //     .replace(/MM/g, MM)
+        //     .replace(/DD/g, DD)
+        //     .replace(/HH/g, HH)
+        //     .replace(/mm/g, mm)
+        //     .replace(/ss/g, ss);
+        
+        // return result;
     } catch (error) {
-        console.error('Error formatting ISO date:', error);
-        return isoString;
+        console.error('Error formatting date:', error);
+        return dateString;
     }
 };
 
@@ -81,5 +97,5 @@ export const formatISODateTime = (isoString: string, format: string = 'yyyy-MM-d
  * @returns 格式化后的当前时间字符串
  */
 export const getCurrentFormattedTime = (format: string = 'yyyy-MM-dd HH:mm'): string => {
-    return formatISODateTime(new Date().toISOString(), format);
+    return formatDateTime(new Date().toISOString(), format);
 }; 

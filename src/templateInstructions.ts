@@ -15,7 +15,7 @@ Enter template for creating synced article file name.
 </div>
 `;
 
-export const metadataTemplateInstructions = `
+export const metadataVariablesInstructions = `
 Enter the metadata separated by comma. you can also use custom aliases in the format of metadata::alias.
 
 <div class="cubox-variables-container">

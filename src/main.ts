@@ -1,9 +1,9 @@
 import { addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder } from 'obsidian';
-import { CuboxApi, CuboxApiOptions } from './cuboxApi';
-import { TemplateProcessor } from './templateProcessor';
-import { formatISODateTime, getCurrentFormattedTime } from './utils';
+import { CuboxApi } from './cuboxApi';
+import { TemplateProcessor, FRONT_MATTER_VARIABLES } from './templateProcessor';
+import { formatDateTime } from './utils';
 import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
-import { filenameTemplateInstructions, metadataTemplateInstructions, contentTemplateInstructions } from './templateInstructions';
+import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions } from './templateInstructions';
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_TAGS_ID, TagSelectModal } from './modal/tagSelectModal';
@@ -22,7 +22,7 @@ interface CuboxSyncSettings {
 	syncFrequency: number;
 	targetFolder: string;
 	filenameTemplate: string;
-	frontMatterTemplate: string;
+	frontMatterVariables: string[];
 	contentTemplate: string;
 	highlightInContent: boolean;
 	dateFormat: string;
@@ -44,7 +44,7 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{title}}-{{create_time}}',
-	frontMatterTemplate: 'id: {{{id}}}',
+	frontMatterVariables: ['id', 'cubox_url', 'url', 'tags'],
 	contentTemplate: '# {{{title}}}\n\n{{{description}}}\n\n[Read in Cubox]({{{cubox_url}}})\n[Read Original]({{{url}}})\n\n{{#highlights.length}}\n## Annotations\n\n{{#highlights}}\n> {{{highlight_text}}}\n{{{highlight_note}}}\n[Link️]({{{highlight_url}}})\n\n{{/highlights}}\n{{/highlights.length}}',
 	highlightInContent: true,
 	dateFormat: 'YYYY-MM-dd',
@@ -63,10 +63,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		await this.loadSettings();
 		
 		// 初始化 API 和模板处理器
-		this.cuboxApi = new CuboxApi({
-			domain: this.settings.domain,
-			apiKey: this.settings.apiKey
-		});
+		this.cuboxApi = new CuboxApi(this.settings.domain, this.settings.apiKey);
 		this.templateProcessor = new TemplateProcessor();
 		// 设置模板处理器的日期格式
 		this.templateProcessor.setDateFormat(this.settings.dateFormat);
@@ -126,16 +123,10 @@ export default class CuboxSyncPlugin extends Plugin {
 		
 		// 更新 API 配置
 		if (this.cuboxApi) {
-			this.cuboxApi.updateConfig({
-				domain: this.settings.domain,
-				apiKey: this.settings.apiKey
-			});
+			this.cuboxApi.updateConfig(this.settings.domain, this.settings.apiKey);
 		} else {
 			// 如果实例不存在，创建新实例
-			this.cuboxApi = new CuboxApi({
-				domain: this.settings.domain,
-				apiKey: this.settings.apiKey
-			});
+			this.cuboxApi = new CuboxApi(this.settings.domain, this.settings.apiKey);
 		}
 		
 		// 更新模板处理器的日期格式
@@ -224,8 +215,8 @@ export default class CuboxSyncPlugin extends Plugin {
 						fullArticle
 					);
 					
-					const frontMatter = this.templateProcessor.processFrontMatterTemplate(
-						this.settings.frontMatterTemplate,
+					const frontMatter = this.templateProcessor.processFrontMatter(
+						this.settings.frontMatterVariables,
 						fullArticle
 					);
 					
@@ -236,7 +227,7 @@ export default class CuboxSyncPlugin extends Plugin {
 					
 					// 组合最终内容
 					let finalContent = '';
-					if (frontMatter) {
+					if (frontMatter.length > 0) {
 						finalContent = `---\n${frontMatter}\n---\n\n`;
 					}
 					finalContent += fullArticle.content;
@@ -308,7 +299,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		}
 		
 		// 使用新的格式化方法
-		return formatISODateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');
+		return formatDateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');
 	}
 }
 
@@ -587,16 +578,23 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		});
 
 		// 更新前置元数据模板设置
-		const metadataInstructionsFragment = document.createRange().createContextualFragment(metadataTemplateInstructions);
+		const metadataInstructionsFragment = document.createRange().createContextualFragment(metadataVariablesInstructions);
 
 		new Setting(containerEl)
-			.setName('Metadata Template')
+			.setName('Metadata Variables')
 			.setDesc(metadataInstructionsFragment)
 			.addTextArea(text => text
-				.setPlaceholder('Enter front matter template')
-				.setValue(this.plugin.settings.frontMatterTemplate)
+				.setPlaceholder('Enter front matter variables')
+				.setValue(this.plugin.settings.frontMatterVariables.join(','))
 				.onChange(async (value) => {
-					this.plugin.settings.frontMatterTemplate = value;
+					this.plugin.settings.frontMatterVariables = value
+					.split(',')
+					.map((v) => v.trim())
+					.filter(
+					  (v, i, a) =>
+						FRONT_MATTER_VARIABLES.includes(v.split('::')[0]) &&
+						a.indexOf(v) === i,
+					)
 					await this.plugin.saveSettings();
 				})
 				// 设置文本区域的大小
@@ -608,7 +606,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.setIcon('reset')
 				.setTooltip('Reset to default')
 				.onClick(async () => {
-					this.plugin.settings.frontMatterTemplate = DEFAULT_SETTINGS.frontMatterTemplate;
+					this.plugin.settings.frontMatterVariables = DEFAULT_SETTINGS.frontMatterVariables;
 					await this.plugin.saveSettings();
 					this.display(); // 刷新显示
 				}));

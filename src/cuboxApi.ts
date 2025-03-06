@@ -31,11 +31,6 @@ export interface CuboxHighlight {
     create_time: string;
 }
 
-export interface CuboxApiOptions {
-    domain: string;
-    apiKey: string;
-}
-
 export interface CuboxFolder {
     id: string;
     name: string;
@@ -78,17 +73,17 @@ export class CuboxApi {
     private endpoint: string;
     private apiKey: string;
 
-    constructor(options: CuboxApiOptions) {
-        this.endpoint = 'https://test.cubox.pro'//`https://${options.domain}`;
-        this.apiKey = options.apiKey;
+    constructor(domain: string, apiKey: string) {
+        this.endpoint =  'https://test.cubox.pro'//`https://${domain}`;
+        this.apiKey = apiKey;
     }
 
     /**
      * 同时更新域名和 API Key
      */
-    updateConfig(options: CuboxApiOptions): void {
-        this.endpoint = 'https://test.cubox.pro'// `https://${options.domain}`;
-        this.apiKey = options.apiKey;
+    updateConfig(domain: string, apiKey: string): void {
+        this.endpoint = 'https://test.cubox.pro'// `https://${domain}`;
+        this.apiKey = apiKey;
     }
 
     /**

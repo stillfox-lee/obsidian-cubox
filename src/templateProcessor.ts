@@ -1,7 +1,25 @@
 import { CuboxArticle, CuboxHighlight } from './cuboxApi';
-import { formatISODateTime, generateSafeFileArticleName } from './utils';
-import * as Mustache from 'mustache';
+import { formatDateTime, generateSafeFileArticleName } from './utils';
+//import * as Mustache from 'mustache';
+import Mustache from 'mustache';
 import { parseYaml, stringifyYaml } from 'obsidian';
+
+export const FRONT_MATTER_VARIABLES = [
+    'title',
+    'article_title',
+    'tags',
+    'create_time',
+    'update_time',
+    'domain',
+    'url',
+    'cubox_url',
+    'description',
+    'description',
+    'words_count',
+    'type',
+    'words_count',
+    'id'
+]
 
 export class TemplateProcessor {
     // 存储日期格式
@@ -25,37 +43,33 @@ export class TemplateProcessor {
             return article.title || 'Untitled';
         }
 
-        // 使用简单的字符串替换而不是 Mustache
-        let filename = template;
+        // 准备用于 Mustache 的视图对象
+        const view = {
+            title: article.title || '',
+            article_title: article.article_title || '',
+            create_time: article.create_time ? formatDateTime(article.create_time, this.dateFormat) : '',
+            update_time: article.update_time ? formatDateTime(article.update_time, this.dateFormat) : '',
+            domain: article.domain || '',
+            type: article.type || '',
+            id: article.id || '',
+            // 可以根据需要添加更多字段
+        };
         
-        // 替换所有支持的模板字段
-        if (article.title) {
-            filename = filename.replace(/{{{title}}}/g, article.title);
-        }
-        if (article.article_title) {
-            filename = filename.replace(/{{{article_title}}}/g, article.article_title); 
-        }
-
-        const createDate = article.create_time ? formatISODateTime(article.create_time, this.dateFormat) : '';
-        if (createDate) {
-            filename = filename.replace(/{{{create_time}}}/g, createDate);
-        }
-        
-        const updateDate = article.update_time ? formatISODateTime(article.update_time, this.dateFormat) : '';
-        if (updateDate) {
-            filename = filename.replace(/{{{update_time}}}/g, updateDate);
-        }
-        
-        if (article.domain) {
-            filename = filename.replace(/{{{domain}}}/g, article.domain);
+        let filename = '';
+        try {
+            filename = Mustache.render(template, view);
+        } catch (error) {
+            console.error('模板渲染失败:', error);
+            // 使用备用方案
+            filename = article.title || 'Untitled';
         }
         
-        if (article.type) {
-            filename = filename.replace(/{{{type}}}/g, article.type);
+        // 限制文件名长度不超过100个字符
+        const MAX_LENGTH = 100;
+        if (filename.length > MAX_LENGTH) {
+            // 如果超过长度限制，截取前100个字符
+            filename = filename.substring(0, MAX_LENGTH);
         }
-        
-        // 移除任何未被替换的模板标记 (如果某些字段不存在)
-        filename = filename.replace(/{{{[^}]+}}}/g, '');
         
         // 处理文件名安全性
         return generateSafeFileArticleName(filename);
@@ -63,68 +77,41 @@ export class TemplateProcessor {
 
     /**
      * 处理前置元数据模板
-     * @param template 模板字符串
+     * @param templateVariables 模板字符串
      * @param article 文章数据
      */
-    processFrontMatterTemplate(template: string, article: CuboxArticle): string {
-        if (!template) {
+    processFrontMatter(templateVariables: string[], article: CuboxArticle): string {
+        if (templateVariables.length === 0) {
             return '';
         }
 
-        try {
-            // 首先尝试将模板解析为 YAML 对象
-            // 如果模板已经是 YAML 格式，则直接使用
-            const yamlObj = parseYaml(template);
-            
-            // 准备用于替换的数据
-            const data = this.prepareTemplateData(article);
-            
-            // 递归处理 YAML 对象中的所有字符串值
-            const processedYaml = this.processYamlObject(yamlObj, data);
-            
-            // 将处理后的对象转换回 YAML 字符串
-            return stringifyYaml(processedYaml);
-        } catch (e) {
-            // 如果解析失败，则使用 Mustache 渲染模板
-            // 这允许用户直接输入 YAML 格式的字符串
-            const data = this.prepareTemplateData(article);
-            const renderedTemplate = Mustache.render(template, data);
-            
-            // 尝试将渲染后的模板解析为 YAML 并重新格式化
-            try {
-                const yamlObj = parseYaml(renderedTemplate);
-                return stringifyYaml(yamlObj);
-            } catch (e) {
-                // 如果仍然无法解析，则返回原始渲染结果
-                return renderedTemplate;
-            }
+        let frontMatter: { [id: string]: unknown } = {
+            id: article.id, // id is required for deduplication
         }
-    }
 
-    /**
-     * 递归处理 YAML 对象中的所有字符串值
-     * @param obj YAML 对象
-     * @param data 替换数据
-     */
-    private processYamlObject(obj: any, data: any): any {
-        if (typeof obj === 'string') {
-            // 如果是字符串，使用 Mustache 进行模板替换
-            return Mustache.render(obj, data);
-        } else if (Array.isArray(obj)) {
-            // 如果是数组，递归处理每个元素
-            return obj.map(item => this.processYamlObject(item, data));
-        } else if (obj !== null && typeof obj === 'object') {
-            // 如果是对象，递归处理每个属性
-            const result: {[key: string]: any} = {};
-            for (const key in obj) {
-                // 处理键名中的模板变量
-                const processedKey = Mustache.render(key, data);
-                result[processedKey] = this.processYamlObject(obj[key], data);
+        for (const item of templateVariables) {
+            // split the item into variable and alias
+            const aliasedVariables = item.split('::')
+            const variable = aliasedVariables[0]
+            if (
+              variable === 'tags' &&
+              article.tags &&
+              article.tags.length > 0
+            ) {
+              // tags are handled separately
+              // use label names as tags
+              frontMatter[variable] = article.tags
+              continue
             }
-            return result;
+      
+            const value = (article as any)[variable]
+            if (value) {
+              // if variable is in article, use it
+              frontMatter[variable] = value
+            }
         }
-        // 其他类型（数字、布尔值等）直接返回
-        return obj;
+        
+        return stringifyYaml(frontMatter)
     }
 
     /**
@@ -164,7 +151,7 @@ export class TemplateProcessor {
     private prepareTemplateData(article: CuboxArticle): any {
         // 格式化日期
         const createDate = article.create_time || '';
-        const formattedDate = createDate ? formatISODateTime(createDate, this.dateFormat) : '';
+        const formattedDate = createDate ? formatDateTime(createDate, this.dateFormat) : '';
         
         // 格式化高亮内容
         let highlightsText = '';
@@ -189,40 +176,5 @@ export class TemplateProcessor {
             // 添加标签数组
             tags: article.tags || []
         };
-    }
-
-    /**
-     * 将对象转换为 YAML 格式的 frontmatter
-     * @param obj 要转换的对象
-     */
-    objectToYamlFrontmatter(obj: any): string {
-        try {
-            return stringifyYaml(obj);
-        } catch (e) {
-            console.error('将对象转换为 YAML 失败:', e);
-            return '';
-        }
-    }
-
-    /**
-     * 解析 YAML 格式的 frontmatter 为对象
-     * @param yaml YAML 字符串
-     */
-    yamlFrontmatterToObject(yaml: string): any {
-        try {
-            return parseYaml(yaml);
-        } catch (e) {
-            console.error('解析 YAML 失败:', e);
-            return {};
-        }
-    }
-
-    /**
-     * 格式化日期 - 使用工具方法
-     * @param dateStr 日期字符串
-     * @param format 格式模板
-     */
-    formatDate(dateStr: string, format: string): string {
-        return formatISODateTime(dateStr, format);
     }
 } 
