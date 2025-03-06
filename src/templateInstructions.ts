@@ -73,3 +73,18 @@ Enter template for creating synced article content.
     <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>
 </div>
 `; 
+
+export const cuboxDateFormat = `
+If date is used on above templates, enter the format date.
+
+<div class="cubox-variables-container">
+    <div class="cubox-variables-title">Available variables</div>
+    <ul class="cubox-variables-list">
+        <li>YYYY-MM-DD</li>
+        <li>MM/DD/YYYY</li>
+        <li>DD.MM.YYYY</li>
+        <li>YYYY-MM-DD HH:MM:SS</li>
+    </ul>
+    <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>
+</div>
+`; 

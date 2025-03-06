@@ -3,7 +3,7 @@ import { CuboxApi } from './cuboxApi';
 import { TemplateProcessor, FRONT_MATTER_VARIABLES } from './templateProcessor';
 import { formatDateTime } from './utils';
 import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
-import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions } from './templateInstructions';
+import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat } from './templateInstructions';
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_TAGS_ID, TagSelectModal } from './modal/tagSelectModal';
@@ -47,7 +47,7 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	frontMatterVariables: ['id', 'cubox_url', 'url', 'tags'],
 	contentTemplate: '# {{{title}}}\n\n{{{description}}}\n\n[Read in Cubox]({{{cubox_url}}})\n[Read Original]({{{url}}})\n\n{{#highlights.length}}\n## Annotations\n\n{{#highlights}}\n> {{{highlight_text}}}\n{{{highlight_note}}}\n[Link️]({{{highlight_url}}})\n\n{{/highlights}}\n{{/highlights.length}}',
 	highlightInContent: true,
-	dateFormat: 'YYYY-MM-dd',
+	dateFormat: 'YYYY-MM-DD',
 	lastSyncTime: 0,
 	lastSyncCardId: null,
 	syncing: false 
@@ -58,6 +58,7 @@ export default class CuboxSyncPlugin extends Plugin {
 	cuboxApi: CuboxApi;
 	templateProcessor: TemplateProcessor;
 	syncIntervalId: number;
+	private statusBarItem: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
@@ -80,8 +81,8 @@ export default class CuboxSyncPlugin extends Plugin {
 		ribbonIconEl.addClass('cubox-sync-ribbon-class');
 
 		// 添加状态栏
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()}`);
+		this.statusBarItem = this.addStatusBarItem();
+		this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()}`);
 
 		// 添加同步命令
 		this.addCommand({
@@ -115,8 +116,6 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async saveSettings() {
-		// 保存之前的设置，用于比较
-		const oldSettings = { ...this.settings };
 		
 		// 保存新设置
 		await this.saveData(this.settings);
@@ -148,6 +147,7 @@ export default class CuboxSyncPlugin extends Plugin {
 				async () => await this.syncCubox(), 
 				this.settings.syncFrequency * 60 * 1000
 			);
+			this.registerInterval(this.syncIntervalId);
 		}
 	}
 
@@ -164,8 +164,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			await this.saveSettings();
 			
 			// 更新状态栏显示
-			const statusBarItemEl = this.addStatusBarItem();
-			statusBarItemEl.setText(`正在同步 Cubox...`);
+			this.statusBarItem.setText(`正在同步 Cubox...`);
 			
 			// 确保目标文件夹存在
 			await this.ensureTargetFolder();
@@ -174,7 +173,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			let lastCardId: string | null = continueLastSync ? this.settings.lastSyncCardId : null;
 			let hasMore = true;
 			let syncCount = 0;
-			
+			let errorCount = 0;
 			// 分页获取所有文章
 			while (hasMore) {
 				// 获取文章列表，传递状态布尔值
@@ -199,87 +198,76 @@ export default class CuboxSyncPlugin extends Plugin {
 				
 				// 处理每篇文章
 				for (const article of articles) {
-					// 获取文章内容
-					const content = await this.cuboxApi.getArticleDetail(article.id);
-					if (content === null) continue;
+					try {
+						// 获取文章内容
+						const content = await this.cuboxApi.getArticleDetail(article.id);
+						if (content === null) continue;
+						
+						// 合并文章基本信息、内容和高亮
+						const fullArticle = {
+							...article,
+							content: content
+						};
+						
+						// 处理文件名和内容
+						const filename = this.templateProcessor.processFilenameTemplate(
+							this.settings.filenameTemplate, 
+							fullArticle
+						);
+						
+						const frontMatter = this.templateProcessor.processFrontMatter(
+							this.settings.frontMatterVariables,
+							fullArticle
+						);
+						
+						// const contentTemplate = this.templateProcessor.processContentTemplate(
+						// 	this.settings.contentTemplate,
+						// 	fullArticle
+						// );
+						
+						// 组合最终内容
+						let finalContent = '';
+						if (frontMatter.length > 0) {
+							finalContent = `---\n${frontMatter}\n---\n\n`;
+						}
+						finalContent += fullArticle.content;
+						
+						// 创建或更新文件
+						const filePath = `${this.settings.targetFolder}/${filename}.md`;
+						await this.app.vault.adapter.write(filePath, finalContent);
+						
+						syncCount++;
 					
-					// 合并文章基本信息、内容和高亮
-					const fullArticle = {
-						...article,
-						content: content
-					};
-					
-					// 处理文件名和内容
-					const filename = this.templateProcessor.processFilenameTemplate(
-						this.settings.filenameTemplate, 
-						fullArticle
-					);
-					
-					const frontMatter = this.templateProcessor.processFrontMatter(
-						this.settings.frontMatterVariables,
-						fullArticle
-					);
-					
-					// const contentTemplate = this.templateProcessor.processContentTemplate(
-					// 	this.settings.contentTemplate,
-					// 	fullArticle
-					// );
-					
-					// 组合最终内容
-					let finalContent = '';
-					if (frontMatter.length > 0) {
-						finalContent = `---\n${frontMatter}\n---\n\n`;
+					} catch (error) {
+						errorCount++;
+						console.error('同步 Cubox 数据失败:', error);
 					}
-					finalContent += fullArticle.content;
-					
-					// 创建或更新文件
-					const filePath = `${this.settings.targetFolder}/${filename}.md`;
-					await this.app.vault.adapter.write(filePath, finalContent);
-					
-					syncCount++;
-					
-					// 更新状态栏显示同步进度
-					statusBarItemEl.setText(`正在同步 Cubox: ${syncCount} 篇文章已同步`);
 				}
 				
 				// 更新分页参数
 				hasMore = moreArticles;
 				lastCardId = newLastCardId;
 				
-				// 在每次分页循环后保存当前的同步状态
-				this.settings.lastSyncCardId = lastCardId;
-				this.settings.lastSyncTime = Date.now();
-				await this.saveSettings();
-				
-				// 只在 lastCardId 不为 null 时才继续分页
-				if (lastCardId === null) {
-					break;
+				if (lastCardId !== null) {
+					this.settings.lastSyncCardId = lastCardId;
+					await this.saveSettings();
 				}
 			}
 			
-			// 同步完成后，清除 lastSyncCardId（表示完整同步已完成）
-			this.settings.lastSyncCardId = null;
 			this.settings.lastSyncTime = Date.now();
-			
-			// 设置同步状态为 false
 			this.settings.syncing = false;
 			await this.saveSettings();
 			
-			// 更新状态栏
-			statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()}`);
-			
-			new Notice(`成功同步 ${syncCount} 篇 Cubox 文章`);
+			const message = `Cubox sync completed: ${syncCount} articles synchronized${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
+			new Notice(message);
+			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (成功)`);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);
 			new Notice('同步 Cubox 数据失败，请检查设置和网络连接');
-			
-			// 出错时也要重置同步状态
+			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (失败)`);
+		} finally {
 			this.settings.syncing = false;
 			await this.saveSettings();
-			
-			// 更新状态栏
-			const statusBarItemEl = this.addStatusBarItem();
-			statusBarItemEl.setText(`上次同步: ${this.formatLastSyncTime()} (失败)`);
 		}
 	}
 
@@ -638,19 +626,23 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					this.display(); // 刷新显示
 				}));
 
+        // 更新日期格式模板设置
+        const dateFormatInstructionsFragment = document.createRange().createContextualFragment(cuboxDateFormat);
+
+        new Setting(containerEl)
+            .setName('Date Format')
+            .setDesc(dateFormatInstructionsFragment)
+            .addText(text => text
+				.setPlaceholder('Enter date format')
+				.setValue(this.plugin.settings.dateFormat)
+				.onChange(async (value) => {
+					this.plugin.settings.dateFormat = value;
+					await this.plugin.saveSettings();
+				}));
+				
 		// 状态部分
 		containerEl.createEl('h3', {text: 'Status'});
 		containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
-
-		// 添加测试连接按钮
-		new Setting(containerEl)
-			.setName('Test Connection')
-			.setDesc('Test your Cubox API connection')
-			.addButton(button => button
-				.setButtonText('Test')
-				.onClick(async () => {
-					await this.plugin.cuboxApi.testConnection();
-				}));
 
 	}
 

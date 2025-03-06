@@ -1,5 +1,4 @@
 import { Notice } from 'obsidian';
-import { formatISODateTime } from './utils';
 import { ALL_FOLDERS_ID } from './modal/folderSelectModal';
 import { ALL_TAGS_ID } from './modal/tagSelectModal';
 import { ALL_STATUS_ID } from './modal/statusSelectModal';
@@ -149,7 +148,7 @@ export class CuboxApi {
             const pageSize = 50;
             
             if (params.lastCardId !== null && params.lastCardId.length > 0) {
-                requestBody.lastCardId = params.lastCardId;
+                requestBody.last_card_id = params.lastCardId;
             }
             
             // 添加文件夹过滤
