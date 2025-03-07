@@ -54,12 +54,12 @@ Enter template for creating synced article content.
         <li class="highlight-item">
             {{highlight_text}}
             <ul class="highlight-sublist">
-                <li>{{highlight_text}}</li>
-                <li>{{highlight_url}}</li>
-                <li>{{highlight_note}}</li>
-                <li>{{date_highlighted}}</li>
-                <li>{{highlight_id}}</li>
-                <li>{{highlight_color}}</li>
+                <li>{{text}}</li>
+                <li>{{image_url}}</li>
+                <li>{{cubox_url}}</li>
+                <li>{{note}}</li>
+                <li>{{color}}</li>
+                <li>{{create_time}}</li>
             </ul>
         </li>
         <li>{{tags}}</li>

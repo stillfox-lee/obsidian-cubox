@@ -9,6 +9,27 @@ import { StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_TAGS_ID, TagSelectModal } from './modal/tagSelectModal';
 import { ALL_STATUS_ID } from './modal/statusSelectModal';
 
+
+export const DEFAULT_CONTENT_TEMPLATE = `# {{{title}}}
+
+{{{description}}}
+
+[Read in Cubox]({{{cubox_url}}})
+[Read Original]({{{url}}})
+
+{{{content}}}
+
+{{#highlights.length}}
+## Annotations
+
+{{#highlights}}
+> {{{text}}}
+{{{note}}}
+[Link️]({{{cubox_url}}})
+
+{{/highlights}}
+{{/highlights.length}}`
+
 interface CuboxSyncSettings {
 	domain: string; // 可以是 'cubox.cc' | 'cubox.pro' | ''
 	apiKey: string;
@@ -45,13 +66,14 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{title}}-{{create_time}}',
 	frontMatterVariables: ['id', 'cubox_url', 'url', 'tags'],
-	contentTemplate: '# {{{title}}}\n\n{{{description}}}\n\n[Read in Cubox]({{{cubox_url}}})\n[Read Original]({{{url}}})\n\n{{#highlights.length}}\n## Annotations\n\n{{#highlights}}\n> {{{highlight_text}}}\n{{{highlight_note}}}\n[Link️]({{{highlight_url}}})\n\n{{/highlights}}\n{{/highlights.length}}',
+	contentTemplate: DEFAULT_CONTENT_TEMPLATE,
 	highlightInContent: true,
 	dateFormat: 'YYYY-MM-DD',
 	lastSyncTime: 0,
 	lastSyncCardId: null,
 	syncing: false 
 }
+
 
 export default class CuboxSyncPlugin extends Plugin {
 	settings: CuboxSyncSettings;
@@ -220,17 +242,17 @@ export default class CuboxSyncPlugin extends Plugin {
 							fullArticle
 						);
 						
-						// const contentTemplate = this.templateProcessor.processContentTemplate(
-						// 	this.settings.contentTemplate,
-						// 	fullArticle
-						// );
+						const contentTemplate = this.templateProcessor.processContentTemplate(
+							this.settings.contentTemplate,
+							fullArticle
+						);
 						
 						// 组合最终内容
 						let finalContent = '';
 						if (frontMatter.length > 0) {
 							finalContent = `---\n${frontMatter}\n---\n\n`;
 						}
-						finalContent += fullArticle.content;
+						finalContent += contentTemplate;
 						
 						// 创建或更新文件
 						const filePath = `${this.settings.targetFolder}/${filename}.md`;

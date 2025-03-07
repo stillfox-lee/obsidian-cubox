@@ -1,7 +1,7 @@
 import { CuboxArticle, CuboxHighlight } from './cuboxApi';
 import { formatDateTime, generateSafeFileArticleName } from './utils';
-//import * as Mustache from 'mustache';
 import Mustache from 'mustache';
+//import * as Mustache from 'mustache';
 import { parseYaml, stringifyYaml } from 'obsidian';
 
 export const FRONT_MATTER_VARIABLES = [
@@ -20,6 +20,38 @@ export const FRONT_MATTER_VARIABLES = [
     'words_count',
     'id'
 ]
+
+// Add these interfaces for the view models
+interface HighlightView {
+    id: string;
+    text: string;
+    image_url?: string;
+    cubox_url: string;
+    note?: string;
+    color: string;
+    create_time: string;
+    formatted_create_time?: string;
+}
+
+interface ArticleView {
+    id: string;
+    title: string;
+    article_title: string;
+    description: string;
+    url: string;
+    domain: string;
+    create_time: string;
+    update_time: string;
+    word_count: number;
+    content?: string;
+    cubox_url: string;
+    type: string;
+    formatted_create_time?: string;
+    formatted_update_time?: string;
+    highlights: HighlightView[];
+    tags: string[];
+    highlights_length: number;
+}
 
 export class TemplateProcessor {
     // 存储日期格式
@@ -76,7 +108,7 @@ export class TemplateProcessor {
     }
 
     /**
-     * 处理前置元数据模板
+     * 处理文章数据模板
      * @param templateVariables 模板字符串
      * @param article 文章数据
      */
@@ -98,8 +130,6 @@ export class TemplateProcessor {
               article.tags &&
               article.tags.length > 0
             ) {
-              // tags are handled separately
-              // use label names as tags
               frontMatter[variable] = article.tags
               continue
             }
@@ -137,44 +167,80 @@ export class TemplateProcessor {
             return content;
         }
 
-        // 准备用于 Mustache 的数据
-        const data = this.prepareTemplateData(article);
+        // 1. 创建 ArticleView 对象
+        const articleView = this.createArticleView(article);
         
-        // 使用 Mustache 渲染模板
-        return Mustache.render(template, data);
+        // 2. 调试输出 (可以在生产环境中移除)
+        console.log('ArticleView for template rendering:', JSON.stringify({
+            title: articleView.title,
+            highlights_length: articleView.highlights_length,
+            highlights_count: articleView.highlights.length,
+            first_highlight: articleView.highlights.length > 0 ? {
+                text: articleView.highlights[0].text,
+                note: articleView.highlights[0].note,
+                cubox_url: articleView.highlights[0].cubox_url
+            } : null
+        }, null, 2));
+        
+        // 3. 使用 Mustache 渲染模板
+        return Mustache.render(template, articleView);
     }
 
     /**
-     * 准备用于 Mustache 模板的数据对象
-     * @param article 文章数据
+     * 创建用于模板渲染的 ArticleView 对象
+     * @param article 原始文章数据
+     * @returns 用于模板渲染的视图对象
      */
-    private prepareTemplateData(article: CuboxArticle): any {
-        // 格式化日期
-        const createDate = article.create_time || '';
-        const formattedDate = createDate ? formatDateTime(createDate, this.dateFormat) : '';
-        
-        // 格式化高亮内容
-        let highlightsText = '';
+    private createArticleView(article: CuboxArticle): ArticleView {
+        // 创建基本的 ArticleView 对象
+        const articleView: ArticleView = {
+            ...article,
+            highlights: [],
+            tags: article.tags || [],
+            highlights_length: article.highlights?.length || 0,
+            formatted_create_time: article.create_time ? formatDateTime(article.create_time, this.dateFormat) : '',
+            formatted_update_time: article.update_time ? formatDateTime(article.update_time, this.dateFormat) : ''
+        };
+
+        // 处理高亮内容
         if (article.highlights && article.highlights.length > 0) {
-            article.highlights.forEach(highlight => {
-                highlightsText += `- ${highlight.text}\n`;
-            });
+            articleView.highlights = article.highlights.map(highlight => this.createHighlightView(highlight));
+        }
+
+        // 确保 Mustache 可以正确处理条件渲染
+        if (articleView.highlights.length === 0) {
+            articleView.highlights_length = 0;
+        } else {
+            articleView.highlights_length = articleView.highlights.length;
+        }
+
+        return articleView;
+    }
+
+    /**
+     * 创建高亮视图对象
+     * @param highlight 原始高亮数据
+     * @returns 用于模板渲染的高亮视图对象
+     */
+    private createHighlightView(highlight: CuboxHighlight): HighlightView {
+        // 确保文本和注释正确处理
+        const text = highlight.text || '';
+        // 只有当 note 存在且不为空时才添加换行符
+        const note = highlight.note && highlight.note.trim() ? highlight.note.trim() + '\n' : '';
+        
+        // 创建高亮视图对象
+        const highlightView: HighlightView = {
+            ...highlight,
+            text: text,
+            note: note,
+            formatted_create_time: highlight.create_time ? formatDateTime(highlight.create_time, this.dateFormat) : ''
+        };
+        
+        // 确保所有必要的字段都存在
+        if (!highlightView.cubox_url) {
+            highlightView.cubox_url = '';
         }
         
-        // 返回包含所有可用变量的对象
-        return {
-            cardTitle: article.title || 'Untitled',
-            createDate: formattedDate,
-            content: article.content || '',
-            highlights: highlightsText,
-            url: article.url || '',
-            domain: article.domain || '',
-            // 添加原始对象，以便可以访问所有属性
-            article: article,
-            // 添加高亮数组，以便可以在模板中循环
-            highlightsList: article.highlights || [],
-            // 添加标签数组
-            tags: article.tags || []
-        };
+        return highlightView;
     }
 } 
