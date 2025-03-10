@@ -6,7 +6,7 @@ import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
 import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat } from './templateInstructions';
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { StatusSelectModal } from './modal/statusSelectModal';
-import { ALL_TAGS_ID, TagSelectModal } from './modal/tagSelectModal';
+import { ALL_ITEMS, TagSelectModal } from './modal/tagSelectModal';
 import { ALL_STATUS_ID } from './modal/statusSelectModal';
 
 
@@ -49,7 +49,9 @@ interface CuboxSyncSettings {
 	dateFormat: string;
 	lastSyncTime: number;
 	lastSyncCardId: string | null;
+	lastCardUpdateTime: string | null;
 	syncing: boolean;
+	skipExistingFiles: boolean; // 是否跳过已存在的文件
 }
 
 const DEFAULT_SETTINGS: CuboxSyncSettings = {
@@ -61,7 +63,7 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	isRead: true,
 	isStarred: true,
 	isAnnotated: true,
-	tagsFilter: [ALL_TAGS_ID],
+	tagsFilter: [ALL_ITEMS],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{title}}-{{create_time}}',
@@ -71,7 +73,9 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	dateFormat: 'YYYY-MM-DD',
 	lastSyncTime: 0,
 	lastSyncCardId: null,
-	syncing: false 
+	lastCardUpdateTime: null,
+	syncing: false,
+	skipExistingFiles: false 
 }
 
 
@@ -97,7 +101,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		addIcon(iconId, '<svg viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_832_147)"><path d="M16.4832 14.9619C16.3985 19.9047 13.3129 19.7653 9.40222 19.7653C5.49152 19.7653 3.46973 18.9255 3.46973 14.6576C3.46973 10.2101 5.49152 6.90909 9.40222 6.90909C13.3129 6.90909 16.4832 10.5144 16.4832 14.9619Z" stroke="currentColor" stroke-width="1.72727"/><rect x="0.863636" y="0.863636" width="17.2727" height="17.2727" rx="8.63636" stroke="currentColor" stroke-width="1.72727"/></g><ellipse cx="6.90905" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><ellipse cx="9.49987" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><defs><clipPath id="clip0_832_147"><rect width="19" height="19" rx="9.5" fill="white"/></clipPath></defs></svg>');
 
 		const ribbonIconEl = this.addRibbonIcon(iconId, iconId, async (evt: MouseEvent) => {
-			new Notice('开始同步 Cubox 数据...');
+			new Notice('Syncing your Cubox…');
 			await this.syncCubox();
 		});
 		ribbonIconEl.addClass('cubox-sync-ribbon-class');
@@ -138,26 +142,10 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async saveSettings() {
-		
-		// 保存新设置
 		await this.saveData(this.settings);
-		
-		// 更新 API 配置
-		if (this.cuboxApi) {
-			this.cuboxApi.updateConfig(this.settings.domain, this.settings.apiKey);
-		} else {
-			// 如果实例不存在，创建新实例
-			this.cuboxApi = new CuboxApi(this.settings.domain, this.settings.apiKey);
-		}
-		
-		// 更新模板处理器的日期格式
-		this.templateProcessor.setDateFormat(this.settings.dateFormat);
-		
-		// 重新设置自动同步
-		this.setupAutoSync();
 	}
 
-	setupAutoSync() {
+	async setupAutoSync() {
 		// 清除现有定时器
 		if (this.syncIntervalId) {
 			window.clearInterval(this.syncIntervalId);
@@ -176,7 +164,7 @@ export default class CuboxSyncPlugin extends Plugin {
 	async syncCubox(continueLastSync: boolean = true) {
 		// 如果已经在同步中，则跳过
 		if (this.settings.syncing) {
-			new Notice('同步已在进行中，请等待当前同步完成');
+			new Notice('Sync is in progress, please wait.');
 			return;
 		}
 		
@@ -193,15 +181,18 @@ export default class CuboxSyncPlugin extends Plugin {
 			
 			// 如果选择继续上次同步，则使用保存的 lastSyncCardId
 			let lastCardId: string | null = continueLastSync ? this.settings.lastSyncCardId : null;
+			let lastCardUpdateTime: string | null = continueLastSync ? this.settings.lastCardUpdateTime : null;
 			let hasMore = true;
 			let syncCount = 0;
 			let errorCount = 0;
+			let skipCount = 0;
 			// 分页获取所有文章
 			while (hasMore) {
 				// 获取文章列表，传递状态布尔值
 				const result = await this.cuboxApi.getArticles(
 					{
 						lastCardId: lastCardId,
+						lastCardUpdateTime: lastCardUpdateTime,
 						folderFilter: this.settings.folderFilter,
 						typeFilter: this.settings.typeFilter,
 						statusFilter: this.settings.statusFilter,
@@ -212,7 +203,7 @@ export default class CuboxSyncPlugin extends Plugin {
 					}
 				);
 				
-				const { articles, hasMore: moreArticles, lastCardId: newLastCardId } = result;
+				const { articles, hasMore: moreArticles} = result;
 				
 				if (articles.length === 0) {
 					break;
@@ -237,6 +228,7 @@ export default class CuboxSyncPlugin extends Plugin {
 							fullArticle
 						);
 						
+						
 						const frontMatter = this.templateProcessor.processFrontMatter(
 							this.settings.frontMatterVariables,
 							fullArticle
@@ -250,12 +242,20 @@ export default class CuboxSyncPlugin extends Plugin {
 						// 组合最终内容
 						let finalContent = '';
 						if (frontMatter.length > 0) {
-							finalContent = `---\n${frontMatter}\n---\n\n`;
+							finalContent = `---\n${frontMatter}\n---\n`;
 						}
 						finalContent += contentTemplate;
 						
 						// 创建或更新文件
 						const filePath = `${this.settings.targetFolder}/${filename}.md`;
+						
+						// 检查文件是否已存在，如果设置了跳过已存在文件则跳过
+						if (this.settings.skipExistingFiles && await this.app.vault.adapter.exists(filePath)) {
+							console.log(`文件已存在，跳过: ${filePath}`);
+							skipCount++;
+							continue;
+						}
+						
 						await this.app.vault.adapter.write(filePath, finalContent);
 						
 						syncCount++;
@@ -266,13 +266,15 @@ export default class CuboxSyncPlugin extends Plugin {
 					}
 				}
 				
-				// 更新分页参数
 				hasMore = moreArticles;
-				lastCardId = newLastCardId;
-				
-				if (lastCardId !== null) {
+
+				if (articles.length > 0) {
+					const lastCardId = articles[articles.length - 1].id;
+					const lastCardUpdateTime = articles[articles.length - 1].update_time;
+					
 					this.settings.lastSyncCardId = lastCardId;
-					await this.saveSettings();
+					this.settings.lastCardUpdateTime = lastCardUpdateTime;
+					await this.saveSettings();			
 				}
 			}
 			
@@ -280,12 +282,12 @@ export default class CuboxSyncPlugin extends Plugin {
 			this.settings.syncing = false;
 			await this.saveSettings();
 			
-			const message = `Cubox sync completed: ${syncCount} articles synchronized${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
+			const message = `Cubox sync completed: ${syncCount} articles synchronized${skipCount > 0 ? `, ${skipCount} skipped` : ''}${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
 			new Notice(message);
 			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (成功)`);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);
-			new Notice('同步 Cubox 数据失败，请检查设置和网络连接');
+			new Notice('Cubox sync failed. Please check settings or network.');
 			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (失败)`);
 		} finally {
 			this.settings.syncing = false;
@@ -310,6 +312,14 @@ export default class CuboxSyncPlugin extends Plugin {
 		
 		// 使用新的格式化方法
 		return formatDateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');
+	}
+
+	updateCuboxApiConfig(domain: string, apiKey: string) {
+		this.cuboxApi.updateConfig(domain, apiKey);
+	}
+
+	updateTemplateProcessorDateFormat(dateFormat: string) {
+		this.templateProcessor.setDateFormat(dateFormat);
 	}
 }
 
@@ -351,6 +361,9 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					
 					// 更新 API Key 设置的描述和状态
 					this.updateApiKeySetting();
+
+					// 更新 Cubox API 配置
+					this.plugin.updateCuboxApiConfig(value, this.plugin.settings.apiKey);
 				}));
 
 		// 添加 API Key 设置
@@ -361,8 +374,35 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				text.setPlaceholder('Enter your API key')
 					.setValue(this.plugin.settings.apiKey)
 					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
+						// 处理用户可能粘贴了完整URL的情况
+						let apiKey = value.trim();
+        
+						// 检查是否是URL格式
+						if (apiKey.includes('://')) {
+							try {
+								// 尝试解析URL或路径
+								const url = apiKey.includes('://') ? new URL(apiKey) : null;
+								
+								// 如果是URL，获取路径的最后一部分
+								if (url) {
+									const pathParts = url.pathname.split('/').filter(part => part.length > 0);
+									if (pathParts.length > 0) {
+										apiKey = pathParts[pathParts.length - 1];
+									}
+								}
+								
+								// 更新输入框显示提取的API key
+								text.setValue(apiKey);
+							} catch (e) {
+								new Notice('Invalid API key');
+							}
+						}
+
+						this.plugin.settings.apiKey = apiKey;
 						await this.plugin.saveSettings();
+
+						// 更新 Cubox API 配置
+						this.plugin.updateCuboxApiConfig(this.plugin.settings.domain, value);
 					});
 				
 				// 如果未选择域名，则禁用输入框
@@ -535,16 +575,36 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		containerEl.createEl('h3', {text: 'Sync'});
 
 		new Setting(containerEl)
+			.setName('Skip Existing Files')
+			.setDesc('If enabled, files that already exist in the target folder will be skipped during sync.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.skipExistingFiles)
+				.onChange(async (value) => {
+					this.plugin.settings.skipExistingFiles = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
 			.setName('Sync Interval')
 			.setDesc('Auto sync interval (in minutes). 0 means manual sync. Each item syncs only once. Subsequent updates won\'t be synced, and modifications in Obsidian won\'t affect Cubox. We recommend avoiding frequent updates.')
-			.addText(text => text
-				.setPlaceholder('Enter sync frequency in minutes')
-				.setValue(String(this.plugin.settings.syncFrequency))
-				.onChange(async (value) => {
-					const numValue = parseInt(value);
-					this.plugin.settings.syncFrequency = isNaN(numValue) ? 0 : numValue;
-					await this.plugin.saveSettings();
-				}));
+			.addText(text => {
+				const textField = text
+					.setPlaceholder('Enter the interval')
+					.setValue(String(this.plugin.settings.syncFrequency))
+					.onChange(async (value) => {
+						const frequency = parseInt(value)
+						if (isNaN(frequency)) {
+						  new Notice('Frequency must be a positive integer')
+						  return
+						}
+						
+						this.plugin.settings.syncFrequency = frequency;
+						await this.plugin.saveSettings();
+						this.plugin.setupAutoSync();
+					});
+				return textField;
+			});
 
 		new Setting(containerEl)
 			.setName('Folder')
@@ -553,6 +613,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.setPlaceholder('Enter target folder path')
 				.setValue(this.plugin.settings.targetFolder)
 				.onChange(async (value) => {
+					this.plugin.settings.lastSyncCardId = null;
 					this.plugin.settings.targetFolder = value;
 					await this.plugin.saveSettings();
 				}));
@@ -660,6 +721,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.dateFormat = value;
 					await this.plugin.saveSettings();
+					this.plugin.updateTemplateProcessorDateFormat(value);
 				}));
 				
 		// 状态部分
@@ -718,7 +780,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		} else if (folderFilters.includes(ALL_FOLDERS_ID)) {
 			return 'All Folders';
 		} else {
-			return `已选择 ${folderFilters.length} 个文件夹`;
+			return `${folderFilters.length} selected`;
 		}
 	}
 
@@ -730,7 +792,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		} else if (typeFilters.length === ALL_CONTENT_TYPES.length) {
 			return 'All Types';
 		} else {
-			return `已选择 ${typeFilters.length} 个类型`;
+			return `${typeFilters.length} selected`;
 		}
 	}
 
@@ -741,20 +803,20 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 		} else if (statusFilters.includes('all')) {
 			return 'All Items';
 		} else {
-			return `已选择 ${statusFilters.length} 个状态`;
+			return `${statusFilters.length} selected`;
 		}
 	}
 
 	private getTagFilterButtonText(): string {
 		const tagFilters = this.plugin.settings.tagsFilter;
 		if (!tagFilters || tagFilters.length === 0) {
-			return 'All Tags';
-		} else if (tagFilters.includes(ALL_TAGS_ID)) {
-			return 'All Tags';
+			return 'Manage';
+		} else if (tagFilters.includes(ALL_ITEMS)) {
+			return 'All Items';
 		} else if (tagFilters.includes('')) {
 			return 'No Tags';
 		} else {
-			return `${tagFilters.length} Tags Selected`;
+			return `${tagFilters.length} selected`;
 		}
 	}
 }

@@ -63,13 +63,13 @@ export class StatusSelectModal extends Modal {
         
         // 添加底部按钮
         // 取消按钮
-        const cancelButton = this.footerEl.createEl('button', { text: '取消' });
+        const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
         // 保存按钮
-        const saveButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
+        const saveButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
             if (this.selectedStatuses.size === 0) {

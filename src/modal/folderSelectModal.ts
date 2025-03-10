@@ -50,13 +50,13 @@ export class FolderSelectModal extends Modal {
         
         // 添加确认和取消按钮
         // 取消按钮
-        const cancelButton = this.footerEl.createEl('button', { text: '取消' });
+        const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
         // 确认按钮
-        const confirmButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
+        const confirmButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         confirmButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
             if (this.selectedFolders.size === 0) {

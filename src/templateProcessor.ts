@@ -51,6 +51,7 @@ interface ArticleView {
     highlights: HighlightView[];
     tags: string[];
     highlights_length: number;
+    content_highlighted?: string;
 }
 
 export class TemplateProcessor {
@@ -170,11 +171,18 @@ export class TemplateProcessor {
         // 1. 创建 ArticleView 对象
         const articleView = this.createArticleView(article);
         
-        // 2. 调试输出 (可以在生产环境中移除)
+        // 2. 检查模板中是否包含 content_highlighted 字段
+        if (template.includes('content_highlighted') && article.content && article.highlights && article.highlights.length > 0) {
+            // 只有当模板中包含 content_highlighted 字段且文章有内容和高亮时才生成高亮内容
+            articleView.content_highlighted = this.generateHighlightedContent(article.content, article.highlights);
+        }
+        
+        // 3. 调试输出 (可以在生产环境中移除)
         console.log('ArticleView for template rendering:', JSON.stringify({
             title: articleView.title,
             highlights_length: articleView.highlights_length,
             highlights_count: articleView.highlights.length,
+            has_highlighted_content: 'content_highlighted' in articleView,
             first_highlight: articleView.highlights.length > 0 ? {
                 text: articleView.highlights[0].text,
                 note: articleView.highlights[0].note,
@@ -182,7 +190,7 @@ export class TemplateProcessor {
             } : null
         }, null, 2));
         
-        // 3. 使用 Mustache 渲染模板
+        // 4. 使用 Mustache 渲染模板
         return Mustache.render(template, articleView);
     }
 
@@ -224,7 +232,23 @@ export class TemplateProcessor {
      */
     private createHighlightView(highlight: CuboxHighlight): HighlightView {
         // 确保文本和注释正确处理
-        const text = highlight.text || '';
+        let text = highlight.text || '';
+        
+        // 处理多行文本，确保每行都有引用符号
+        // 将文本按换行符分割，然后在每行前添加引用符号，最后重新组合
+        if (text.includes('\n')) {
+            // 分割文本为多行
+            const lines = text.split('\n');
+            // 为每行添加引用符号（第一行保持原样，因为模板中已经有 > 符号）
+            const formattedLines = lines.map((line, index) => {
+                // 第一行不需要添加引用符号
+                if (index === 0) return line;
+                // 非空行添加引用符号
+                return line.trim() ? '> ' + line : '>';
+            });
+            text = formattedLines.join('\n');
+        }
+        
         // 只有当 note 存在且不为空时才添加换行符
         const note = highlight.note && highlight.note.trim() ? highlight.note.trim() + '\n' : '';
         
@@ -242,5 +266,65 @@ export class TemplateProcessor {
         }
         
         return highlightView;
+    }
+
+    private generateHighlightedContent(content: string, highlights: CuboxHighlight[]): string {
+        if (!content || !highlights || highlights.length === 0) {
+            return content || '';
+        }
+
+        // 创建一个标记数组，记录每个字符是否需要高亮
+        const contentLength = content.length;
+        const highlightMarkers = new Array(contentLength).fill(false);
+        
+        // 标记所有需要高亮的字符
+        for (const highlight of highlights) {
+            const highlightText = highlight.text;
+            if (!highlightText) continue;
+            
+            // 查找所有匹配位置
+            let startPos = 0;
+            let index;
+            
+            while ((index = content.indexOf(highlightText, startPos)) !== -1) {
+                // 标记这段文本需要高亮
+                for (let i = 0; i < highlightText.length; i++) {
+                    highlightMarkers[index + i] = true;
+                }
+                
+                // 从匹配位置之后继续搜索
+                startPos = index + 1;
+            }
+        }
+        
+        // 根据标记生成高亮内容
+        let highlightedContent = '';
+        let inHighlight = false;
+        
+        for (let i = 0; i < contentLength; i++) {
+            const shouldHighlight = highlightMarkers[i];
+            
+            // 开始高亮
+            if (shouldHighlight && !inHighlight) {
+                highlightedContent += '==';
+                inHighlight = true;
+            }
+            
+            // 结束高亮
+            if (!shouldHighlight && inHighlight) {
+                highlightedContent += '==';
+                inHighlight = false;
+            }
+            
+            // 添加当前字符
+            highlightedContent += content[i];
+        }
+        
+        // 如果文章结尾处于高亮状态，添加结束标记
+        if (inHighlight) {
+            highlightedContent += '==';
+        }
+        
+        return highlightedContent;
     }
 } 

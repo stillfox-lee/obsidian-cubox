@@ -3,7 +3,7 @@ import { CuboxTag } from '../cuboxApi';
 import { ModalStyleManager } from '../utils/modalStyles';
 
 // 定义虚拟的 ALL 标签 ID 和 NO_TAGS 标签 ID
-export const ALL_TAGS_ID = 'all_tags';
+export const ALL_ITEMS = 'all_items';
 export const NO_TAGS_ID = '';
 
 export class TagSelectModal extends Modal {
@@ -29,7 +29,7 @@ export class TagSelectModal extends Modal {
             });
         } else {
             // 如果没有初始选择，默认选中"All Items"
-            this.selectedTags.add(ALL_TAGS_ID);
+            this.selectedTags.add(ALL_ITEMS);
         }
         
         this.onConfirm = onConfirm;
@@ -51,13 +51,13 @@ export class TagSelectModal extends Modal {
         
         // 添加确认和取消按钮
         // 取消按钮
-        const cancelButton = this.footerEl.createEl('button', { text: '取消' });
+        const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
         // 确认按钮
-        const confirmButton = this.footerEl.createEl('button', { text: '确认', cls: 'mod-cta' });
+        const confirmButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         confirmButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
             if (this.selectedTags.size === 0) {
@@ -65,7 +65,7 @@ export class TagSelectModal extends Modal {
                 return;
             }
             
-            const resultTags = this.selectedTags.has(ALL_TAGS_ID) ? [ALL_TAGS_ID] : Array.from(this.selectedTags);
+            const resultTags = this.selectedTags.has(ALL_ITEMS) ? [ALL_ITEMS] : Array.from(this.selectedTags);
 
             this.onConfirm(resultTags);
             this.close();
@@ -93,22 +93,22 @@ export class TagSelectModal extends Modal {
             .setName('All Items');
             
         // 添加选中状态的类
-        if (this.selectedTags.has(ALL_TAGS_ID)) {
+        if (this.selectedTags.has(ALL_ITEMS)) {
             allItemsSetting.settingEl.addClass('is-selected');
         }
         
         // 添加点击事件
         allItemsSetting.settingEl.addEventListener('click', () => {
-            const isCurrentlySelected = this.selectedTags.has(ALL_TAGS_ID);
-            this.handleTagToggle(ALL_TAGS_ID, !isCurrentlySelected);
+            const isCurrentlySelected = this.selectedTags.has(ALL_ITEMS);
+            this.handleTagToggle(ALL_ITEMS, !isCurrentlySelected);
             this.redraw();
         });
         
         // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
         allItemsSetting.addToggle(toggle => toggle
-            .setValue(this.selectedTags.has(ALL_TAGS_ID))
+            .setValue(this.selectedTags.has(ALL_ITEMS))
             .onChange(value => {
-                this.handleTagToggle(ALL_TAGS_ID, value);
+                this.handleTagToggle(ALL_ITEMS, value);
                 this.redraw();
             }));
         
@@ -117,7 +117,7 @@ export class TagSelectModal extends Modal {
             .setName('No Tags');
             
         // 如果"All Items"被选中，禁用其他选项
-        if (this.selectedTags.has(ALL_TAGS_ID)) {
+        if (this.selectedTags.has(ALL_ITEMS)) {
             noTagsSetting.settingEl.addClass('is-disabled');
         } else {
             // 添加选中状态的类
@@ -147,7 +147,7 @@ export class TagSelectModal extends Modal {
                 .setName(tag.nested_name);
                 
             // 如果"All Items"被选中，禁用其他选项
-            if (this.selectedTags.has(ALL_TAGS_ID)) {
+            if (this.selectedTags.has(ALL_ITEMS)) {
                 tagSetting.settingEl.addClass('is-disabled');
             } else {
                 // 添加选中状态的类
@@ -179,20 +179,20 @@ export class TagSelectModal extends Modal {
     }
 
     private handleTagToggle(tagId: string, isSelected: boolean) {
-        if (tagId === ALL_TAGS_ID) {
+        if (tagId === ALL_ITEMS) {
             if (isSelected) {
                 // 如果选择了"All Items"，清除其他所有选择，只保留ALL_TAGS_ID
                 this.selectedTags.clear();
-                this.selectedTags.add(ALL_TAGS_ID);
+                this.selectedTags.add(ALL_ITEMS);
             } else {
                 // 如果取消了"All Items"，清除它
-                this.selectedTags.delete(ALL_TAGS_ID);
+                this.selectedTags.delete(ALL_ITEMS);
                 // 不自动选择其他标签，让用户自己选择
             }
         } else {
             if (isSelected) {
                 // 如果选择了特定标签，移除"All Items"
-                this.selectedTags.delete(ALL_TAGS_ID);
+                this.selectedTags.delete(ALL_ITEMS);
                 // 添加新选择的标签
                 this.selectedTags.add(tagId);
             } else {

@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
 import { ALL_FOLDERS_ID } from './modal/folderSelectModal';
-import { ALL_TAGS_ID } from './modal/tagSelectModal';
+import { ALL_ITEMS } from './modal/tagSelectModal';
 import { ALL_STATUS_ID } from './modal/statusSelectModal';
 
 export interface CuboxArticle {
@@ -85,22 +85,6 @@ export class CuboxApi {
         this.apiKey = apiKey;
     }
 
-    /**
-     * 测试 API 连接是否有效
-     */
-    async testConnection(): Promise<boolean> {
-        try {
-            // 尝试获取一篇文章来测试连接
-            const result = await this.getArticles({ lastCardId: null});
-            new Notice('测试 Cubox 连接成功');
-            return true;
-        } catch (error) {
-            console.error('Cubox API 连接测试失败:', error);
-            new Notice('Cubox API 连接失败，请检查域名和 API Key');
-            return false;
-        }
-    }
-
     private async request(path: string, options: RequestInit = {}) {
         const url = `${this.endpoint}${path}`;
         const headers = {
@@ -130,6 +114,7 @@ export class CuboxApi {
     async getArticles(
         params: { 
             lastCardId: string | null; 
+            lastCardUpdateTime: string | null;
             folderFilter?: string[];
             typeFilter?: string[];
             statusFilter?: string[];
@@ -137,8 +122,8 @@ export class CuboxApi {
             isRead?: boolean;
             isStarred?: boolean;
             isAnnotated?: boolean;
-        } = { lastCardId: null }
-    ): Promise<{ articles: CuboxArticle[], hasMore: boolean, lastCardId: string | null }> {
+        } = { lastCardId: null, lastCardUpdateTime: null }
+    ): Promise<{ articles: CuboxArticle[], hasMore: boolean}> {
         try {
             // 创建请求体对象而不是URL参数
             const requestBody: Record<string, any> = {
@@ -147,8 +132,9 @@ export class CuboxApi {
             
             const pageSize = 50;
             
-            if (params.lastCardId !== null && params.lastCardId.length > 0) {
-                requestBody.last_card_id = params.lastCardId;
+            if (params.lastCardId !== null && params.lastCardId.length > 0 && params.lastCardUpdateTime !== null && params.lastCardUpdateTime.length > 0) {
+                requestBody.last_card_id = params.lastCardId;   
+                requestBody.last_card_update_time = params.lastCardUpdateTime;
             }
             
             // 添加文件夹过滤
@@ -179,7 +165,7 @@ export class CuboxApi {
             // 添加标签过滤
             if (params.tagsFilter && params.tagsFilter.length > 0) {
                 // 检查是否包含 ALL_TAGS_ID，如果包含则不添加标签过滤
-                const hasAllTagsId = params.tagsFilter.includes(ALL_TAGS_ID);
+                const hasAllTagsId = params.tagsFilter.includes(ALL_ITEMS);
                 if (!hasAllTagsId) {
                     requestBody.tag_filters = params.tagsFilter;
                 }
@@ -193,12 +179,10 @@ export class CuboxApi {
             
             const articles = response.data;
             const hasMore = articles.length >= pageSize;
-            const lastCardId = articles.length > 0 ? articles[articles.length - 1].id : null;
 
             return {
                 articles,
-                hasMore,
-                lastCardId
+                hasMore
             };
         } catch (error) {
             console.error('获取文章列表失败:', error);
