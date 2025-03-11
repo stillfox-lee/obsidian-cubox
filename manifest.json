@@ -1,10 +1,9 @@
 {
 	"id": "obsidian-cubox-sync",
-	"name": "Cubox Sync",
+	"name": "Cubox",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "同步 Cubox 文章和高亮内容到 Obsidian",
-	"author": "Your Name",
-	"authorUrl": "https://github.com/yourusername",
+	"description": "Sync your Cubox articles & annotation",
+	"author": "Cubox",
 	"isDesktopOnly": false
 }

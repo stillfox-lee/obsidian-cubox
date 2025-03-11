@@ -39,7 +39,7 @@ export const generateSafeFileArticleName = (title: string): string => {
  * @param format 输出格式，支持：YYYY(年), MM(月), DD(日), HH(时), mm(分), ss(秒)
  * @returns 格式化后的时间字符串
  */
-export const formatDateTime = (dateString: string, format: string = 'YYYY-MM-DD HH:mm:ss'): string => {
+export const formatDateTime = (dateString: string, format: string = 'yyyy-MM-dd HH:mm:ss'): string => {
     if (!dateString) return '';
     
     try {
@@ -47,7 +47,7 @@ export const formatDateTime = (dateString: string, format: string = 'YYYY-MM-DD 
         let normalizedString = dateString;
         // 处理类似 2024-04-23T14:30:42:780+08:00 格式（秒与毫秒之间用冒号）
         normalizedString = normalizedString.replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})/, '$1:$2:$3.$4');
-        return DateTime.fromISO(normalizedString).toFormat(format);
+        return DateTime.fromISO(normalizedString).toFormat(format);    
     } catch (error) {
         console.error('Error formatting date:', error);
         return dateString;

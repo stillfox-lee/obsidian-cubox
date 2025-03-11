@@ -219,7 +219,7 @@ export class CuboxApi {
             return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 文件夹列表失败:', error);
-            new Notice('获取 Cubox 文件夹列表失败');
+            new Notice('Failed to get Cubox folders');
             throw error;
         }
     }
@@ -235,7 +235,7 @@ export class CuboxApi {
             return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 标签列表失败:', error);
-            new Notice('获取 Cubox 标签列表失败');
+            new Notice('Failed to get Cubox tags');
             throw error;
         }
     }

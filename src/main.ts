@@ -69,7 +69,7 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	frontMatterVariables: ['id', 'cubox_url', 'url', 'tags'],
 	contentTemplate: DEFAULT_CONTENT_TEMPLATE,
 	highlightInContent: true,
-	dateFormat: 'YYYY-MM-DD',
+	dateFormat: 'yyyy-MM-dd',
 	lastSyncTime: 0,
 	lastSyncCardId: null,
 	lastCardUpdateTime: null,
@@ -151,11 +151,9 @@ export default class CuboxSyncPlugin extends Plugin {
 		
 		// 如果频率大于0，设置新的定时器
 		if (this.settings.syncFrequency > 0) {
-			const frequency = Math.min(this.settings.syncFrequency, 1440); // 最大24小时
-
 			this.syncIntervalId = window.setInterval(
 				async () => await this.syncCubox(), 
-				frequency * 60 * 1000
+				this.settings.syncFrequency * 60 * 1000
 			);
 			this.registerInterval(this.syncIntervalId);
 		}
@@ -309,7 +307,7 @@ export default class CuboxSyncPlugin extends Plugin {
 
 	formatLastSyncTime(): string {
 		if (!this.settings.lastSyncTime) {
-			return '从未同步';
+			return 'Never';
 		}
 		
 		// 使用新的格式化方法
@@ -430,7 +428,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					// 确保 API 已初始化
 					if (!this.plugin.settings.apiKey) {
-						new Notice('请先设置 API Key');
+						new Notice('Please enter the API key first');
 						return;
 					}
 					
@@ -456,7 +454,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						modal.open();
 					} catch (error) {
 						console.error('获取文件夹列表失败:', error);
-						new Notice('获取文件夹列表失败，请检查网络连接和 API Key');
+						new Notice('Failed to get Cubox folders');
 						// 恢复按钮文本
 						button.setButtonText(this.getFolderFilterButtonText());
 					}
@@ -473,7 +471,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					// 确保 API 已初始化
 					if (!this.plugin.settings.apiKey) {
-						new Notice('请先设置 API Key');
+						new Notice('Please enter the API key first');
 						return;
 					}
 					
@@ -499,7 +497,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						modal.open();
 					} catch (error) {
 						console.error('获取标签列表失败:', error);
-						new Notice('获取标签列表失败，请检查网络连接和 API Key');
+						new Notice('Failed to get Cubox tags');
 						// 恢复按钮文本
 						button.setButtonText(this.getTagFilterButtonText());
 					}
@@ -516,7 +514,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					// 确保 API 已初始化
 					if (!this.plugin.settings.apiKey) {
-						new Notice('请先设置 API Key');
+						new Notice('Please enter the API key first');
 						return;
 					}
 					
@@ -543,7 +541,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					// 确保 API 已初始化
 					if (!this.plugin.settings.apiKey) {
-						new Notice('请先设置 API Key');
+						new Notice('Please enter the API key first');
 						return;
 					}
 					
@@ -584,15 +582,18 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 					.setPlaceholder('Enter the interval')
 					.setValue(String(this.plugin.settings.syncFrequency))
 					.onChange(async (value) => {
-						const frequency = parseInt(value)
+						let frequency = parseInt(value)
 						if (isNaN(frequency)) {
 						  new Notice('Frequency must be a positive integer')
 						  return
 						}
-						
+					    frequency = Math.min(frequency, 9999); // 最大24小时
 						this.plugin.settings.syncFrequency = frequency;
 						await this.plugin.saveSettings();
 						this.plugin.setupAutoSync();
+						
+						// 将处理后的值回填到输入框
+						text.setValue(String(frequency));
 					});
 				return textField;
 			});
