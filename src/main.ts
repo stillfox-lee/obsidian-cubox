@@ -51,7 +51,6 @@ interface CuboxSyncSettings {
 	lastSyncCardId: string | null;
 	lastCardUpdateTime: string | null;
 	syncing: boolean;
-	skipExistingFiles: boolean; // 是否跳过已存在的文件
 }
 
 const DEFAULT_SETTINGS: CuboxSyncSettings = {
@@ -75,7 +74,6 @@ const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	lastSyncCardId: null,
 	lastCardUpdateTime: null,
 	syncing: false,
-	skipExistingFiles: false 
 }
 
 
@@ -153,15 +151,17 @@ export default class CuboxSyncPlugin extends Plugin {
 		
 		// 如果频率大于0，设置新的定时器
 		if (this.settings.syncFrequency > 0) {
+			const frequency = Math.min(this.settings.syncFrequency, 1440); // 最大24小时
+
 			this.syncIntervalId = window.setInterval(
 				async () => await this.syncCubox(), 
-				this.settings.syncFrequency * 60 * 1000
+				frequency * 60 * 1000
 			);
 			this.registerInterval(this.syncIntervalId);
 		}
 	}
 
-	async syncCubox(continueLastSync: boolean = true) {
+	async syncCubox() {
 		// 如果已经在同步中，则跳过
 		if (this.settings.syncing) {
 			new Notice('Sync is in progress, please wait.');
@@ -169,7 +169,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		}
 		
 		try {
-			// 设置同步状态为 true
+			// 设置同步状态为进行中
 			this.settings.syncing = true;
 			await this.saveSettings();
 			
@@ -180,8 +180,8 @@ export default class CuboxSyncPlugin extends Plugin {
 			await this.ensureTargetFolder();
 			
 			// 如果选择继续上次同步，则使用保存的 lastSyncCardId
-			let lastCardId: string | null = continueLastSync ? this.settings.lastSyncCardId : null;
-			let lastCardUpdateTime: string | null = continueLastSync ? this.settings.lastCardUpdateTime : null;
+			let lastCardId: string | null = this.settings.lastSyncCardId;
+			let lastCardUpdateTime: string | null = this.settings.lastCardUpdateTime;
 			let hasMore = true;
 			let syncCount = 0;
 			let errorCount = 0;
@@ -250,7 +250,7 @@ export default class CuboxSyncPlugin extends Plugin {
 						const filePath = `${this.settings.targetFolder}/${filename}.md`;
 						
 						// 检查文件是否已存在，如果设置了跳过已存在文件则跳过
-						if (this.settings.skipExistingFiles && await this.app.vault.adapter.exists(filePath)) {
+						if (await this.app.vault.adapter.exists(filePath)) {
 							console.log(`文件已存在，跳过: ${filePath}`);
 							skipCount++;
 							continue;
@@ -282,9 +282,11 @@ export default class CuboxSyncPlugin extends Plugin {
 			this.settings.syncing = false;
 			await this.saveSettings();
 			
+			// 更新状态栏
+			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()}`);
+
 			const message = `Cubox sync completed: ${syncCount} articles synchronized${skipCount > 0 ? `, ${skipCount} skipped` : ''}${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
 			new Notice(message);
-			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (成功)`);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);
 			new Notice('Cubox sync failed. Please check settings or network.');
@@ -402,7 +404,7 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 
 						// 更新 Cubox API 配置
-						this.plugin.updateCuboxApiConfig(this.plugin.settings.domain, value);
+						this.plugin.updateCuboxApiConfig(this.plugin.settings.domain, apiKey);
 					});
 				
 				// 如果未选择域名，则禁用输入框
@@ -573,17 +575,6 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 
 		// 同步设置部分
 		containerEl.createEl('h3', {text: 'Sync'});
-
-		new Setting(containerEl)
-			.setName('Skip Existing Files')
-			.setDesc('If enabled, files that already exist in the target folder will be skipped during sync.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.skipExistingFiles)
-				.onChange(async (value) => {
-					this.plugin.settings.skipExistingFiles = value;
-					await this.plugin.saveSettings();
-				})
-			);
 
 		new Setting(containerEl)
 			.setName('Sync Interval')

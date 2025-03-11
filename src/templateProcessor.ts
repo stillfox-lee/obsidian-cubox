@@ -177,20 +177,7 @@ export class TemplateProcessor {
             articleView.content_highlighted = this.generateHighlightedContent(article.content, article.highlights);
         }
         
-        // 3. 调试输出 (可以在生产环境中移除)
-        console.log('ArticleView for template rendering:', JSON.stringify({
-            title: articleView.title,
-            highlights_length: articleView.highlights_length,
-            highlights_count: articleView.highlights.length,
-            has_highlighted_content: 'content_highlighted' in articleView,
-            first_highlight: articleView.highlights.length > 0 ? {
-                text: articleView.highlights[0].text,
-                note: articleView.highlights[0].note,
-                cubox_url: articleView.highlights[0].cubox_url
-            } : null
-        }, null, 2));
-        
-        // 4. 使用 Mustache 渲染模板
+        // 3. 使用 Mustache 渲染模板
         return Mustache.render(template, articleView);
     }
 

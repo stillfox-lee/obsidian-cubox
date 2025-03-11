@@ -1,94 +1,171 @@
-# Obsidian Sample Plugin
+# Obsidian Cubox Sync
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+![Obsidian Cubox Sync](https://img.shields.io/badge/Obsidian-Cubox%20Sync-7963E6)
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+> 将 Cubox 中的文章和标注同步到 Obsidian，打造无缝知识管理流程。
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Obsidian Cubox Sync 是一个强大的 Obsidian 插件，它允许您将 Cubox 中收藏的文章、网页和标注内容自动同步到 Obsidian 笔记中。通过这个插件，您可以将 Cubox 作为信息收集工具，而 Obsidian 作为知识整理和思考工具，构建完整的个人知识管理系统。
 
-## First time developing plugins?
+## ✨ 主要功能
 
-Quick starting guide for new plugin devs:
+- **自动同步**：定时从 Cubox 同步文章和标注到 Obsidian
+- **灵活过滤**：支持按文件夹、内容类型、状态和标签过滤同步内容
+- **自定义模板**：使用 Mustache 模板语法自定义文件名、前置元数据和内容格式
+- **高亮标注**：将 Cubox 中的高亮内容同步到 Obsidian 笔记中
+- **增量同步**：智能识别新增和更新的内容，避免重复同步
+- **手动触发**：支持通过命令或按钮手动触发同步
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## 🚀 安装方法
 
-## Releasing new releases
+### 从 Obsidian 社区插件库安装
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. 打开 Obsidian 设置
+2. 进入 "第三方插件" 选项卡
+3. 关闭 "安全模式"
+4. 点击 "浏览" 按钮
+5. 搜索 "Cubox Sync"
+6. 点击安装
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### 手动安装
 
-## Adding your plugin to the community plugin list
+1. 下载最新版本的 `main.js`、`manifest.json` 和 `styles.css` 文件
+2. 在您的 Obsidian 库中创建 `.obsidian/plugins/obsidian-cubox-sync` 文件夹
+3. 将下载的文件复制到该文件夹中
+4. 在 Obsidian 设置中启用插件
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## ⚙️ 配置说明
 
-## How to use
+### 连接设置
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+1. **Cubox 服务器域名**：选择您使用的 Cubox 服务器域名（cubox.cc 或 cubox.pro）
+2. **Cubox API 密钥**：输入您的 Cubox API 密钥（可在 Cubox 网页版设置中创建）
 
-## Manually installing the plugin
+### 过滤设置
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+- **文件夹过滤**：选择要同步的 Cubox 文件夹
+- **类型过滤**：选择要同步的内容类型（文章、视频、图片等）
+- **状态过滤**：选择要同步的内容状态（已读、未读等）
+- **标签过滤**：选择要同步的标签
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### 同步设置
 
-## Funding URL
+- **同步频率**：设置自动同步的时间间隔（分钟），设为 0 表示仅手动同步
+- **目标文件夹**：设置同步内容保存到 Obsidian 的哪个文件夹
+- **文件名模板**：设置生成的笔记文件名格式
+- **前置元数据**：设置笔记的前置元数据字段
+- **内容模板**：设置笔记内容的格式
+- **日期格式**：设置日期时间的显示格式
 
-You can include funding URLs where people who use your plugin can financially support it.
+## 🔍 模板变量
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+### 文件名模板变量
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+- `{{title}}` - 文章标题
+- `{{article_title}}` - 原始文章标题
+- `{{create_time}}` - 创建时间
+- `{{update_time}}` - 更新时间
+- `{{domain}}` - 域名
+- `{{type}}` - 内容类型
+
+### 前置元数据变量
+
+- `title` - 文章标题
+- `article_title` - 原始文章标题
+- `tags` - 标签列表
+- `create_time` - 创建时间
+- `update_time` - 更新时间
+- `domain` - 域名
+- `url` - 原始链接
+- `cubox_url` - Cubox 链接
+- `description` - 描述
+- `words_count` - 字数统计
+- `type` - 内容类型
+- `id` - 文章 ID
+
+### 内容模板变量
+
+- `{{title}}` - 文章标题
+- `{{description}}` - 描述
+- `{{content}}` - 文章内容
+- `{{content_highlighted}}` - 带高亮的文章内容
+- `{{highlights.length}}` - 高亮数量
+- `{{#highlights}}` ... `{{/highlights}}` - 高亮内容循环
+  - `{{text}}` - 高亮文本
+  - `{{note}}` - 高亮笔记
+  - `{{cubox_url}}` - 高亮链接
+  - `{{color}}` - 高亮颜色
+  - `{{create_time}}` - 高亮创建时间
+
+## 📝 使用示例
+
+### 基本内容模板示例
+
+```
+# {{{title}}}
+
+{{{description}}}
+
+[Read in Cubox]({{{cubox_url}}})
+[Read Original]({{{url}}})
+
+{{{content}}}
+
+{{#highlights.length}}
+## Annotations
+
+{{#highlights}}
+> {{{text}}}
+{{{note}}}
+[Link️]({{{cubox_url}}})
+
+{{/highlights}}
+{{/highlights.length}}
 ```
 
-If you have multiple URLs, you can also do:
+### 前置元数据示例
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+```
+title,url,tags,create_time,domain
 ```
 
-## API Documentation
+或使用别名：
 
-See https://github.com/obsidianmd/obsidian-api
+```
+title,url,tags,create_time::date,domain::source
+```
+
+## 🔄 同步流程
+
+1. 插件会根据设置的频率自动同步，或者您可以手动触发同步
+2. 同步时会根据过滤条件获取 Cubox 中的文章
+3. 对于每篇文章，插件会根据模板生成文件名、前置元数据和内容
+4. 生成的笔记会保存到指定的目标文件夹中
+5. 同步完成后，状态栏会显示最后同步时间
+
+## 🛠️ 开发者信息
+
+### 构建项目
+
+1. 克隆仓库
+2. 安装依赖：`npm install`
+3. 开发模式：`npm run dev`
+4. 构建生产版本：`npm run build`
+
+### 主要依赖
+
+- Mustache：用于模板渲染
+- Luxon：用于日期时间处理
+
+## 📄 许可证
+
+本项目采用 MIT 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
+
+## 🙏 致谢
+
+- [Obsidian](https://obsidian.md/) - 知识管理工具
+- [Cubox](https://cubox.pro/) - 网络内容收藏工具
+- 所有贡献者和用户
+
+---
+
+如有问题或建议，请在 GitHub 仓库中提交 Issue。

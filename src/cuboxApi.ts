@@ -14,7 +14,7 @@ export interface CuboxArticle {
     update_time: string;
     word_count: number;
     content?: string;
-    cubox_url: string;
+    cubox_url: string;  
     highlights?: CuboxHighlight[];
     tags?: string[];
     type: string;
@@ -177,8 +177,8 @@ export class CuboxApi {
                 body: JSON.stringify(requestBody)
             }) as ListResponse;
             
-            const articles = response.data;
-            const hasMore = articles.length >= pageSize;
+            const articles = response.data ?? [];
+            const hasMore = articles && articles.length >= pageSize;
 
             return {
                 articles,
@@ -203,24 +203,8 @@ export class CuboxApi {
             return response.data;
         } catch (error) {
             console.error(`获取文章 ${articleId} 详情失败:`, error);
-            new Notice(`获取文章详情失败`);
-            return null;
-        }
-    }
 
-    /**
-     * 获取文章的高亮内容
-     * @param articleId 文章ID
-     */
-    async getHighlights(articleId: string): Promise<CuboxHighlight[]> {
-        try {
-            // 这里需要实现获取高亮的API调用
-            // 暂时返回空数组
-            return [];
-        } catch (error) {
-            console.error(`获取文章 ${articleId} 高亮内容失败:`, error);
-            new Notice(`获取高亮内容失败`);
-            return [];
+            return null;
         }
     }
 
@@ -232,7 +216,7 @@ export class CuboxApi {
             const path = '/c/api/third-party/group/list';
             const response = await this.request(path) as FoldersResponse;
             
-            return response.data;
+            return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 文件夹列表失败:', error);
             new Notice('获取 Cubox 文件夹列表失败');
@@ -248,7 +232,7 @@ export class CuboxApi {
             const path = '/c/api/third-party/tag/list';
             const response = await this.request(path) as TagsResponse;
             
-            return response.data;
+            return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 标签列表失败:', error);
             new Notice('获取 Cubox 标签列表失败');
