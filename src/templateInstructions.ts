@@ -78,13 +78,13 @@ export const cuboxDateFormat = `
 If date is used on above templates, enter the format date.
 
 <div class="cubox-variables-container">
-    <div class="cubox-variables-title">Available variables</div>
+    <div class="cubox-variables-title">Example</div>
     <ul class="cubox-variables-list">
         <li>yyyy-MM-dd</li>
         <li>MM/dd/yyyy</li>
         <li>dd.MM.yyyy</li>
         <li>yyyy-MM-dd HH:mm:ss</li>
     </ul>
-    <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>
+    <div class="cubox-reference">For more, refer to <a href="https://moment.github.io/luxon/#/formatting?id=table-of-tokens" class="reference-link">reference</a>.</div>
 </div>
 `; 

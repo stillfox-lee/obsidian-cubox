@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxTag } from '../cuboxApi';
-import { ModalStyleManager } from '../utils/modalStyles';
+import { ModalStyleManager } from './modalStyles';
 
 // 定义虚拟的 ALL 标签 ID 和 NO_TAGS 标签 ID
 export const ALL_ITEMS = 'all_items';

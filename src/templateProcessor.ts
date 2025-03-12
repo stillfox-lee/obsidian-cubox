@@ -114,12 +114,12 @@ export class TemplateProcessor {
      * @param article 文章数据
      */
     processFrontMatter(templateVariables: string[], article: CuboxArticle): string {
-        if (templateVariables.length === 0) {
-            return '';
-        }
-
         let frontMatter: { [id: string]: unknown } = {
             id: article.id, // id is required for deduplication
+        }
+
+        if (templateVariables.length === 0) {
+            return stringifyYaml(frontMatter);
         }
 
         for (const item of templateVariables) {

@@ -1,4 +1,4 @@
-import { addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder } from 'obsidian';
+import { addIcon, App, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { CuboxApi } from './cuboxApi';
 import { TemplateProcessor, FRONT_MATTER_VARIABLES } from './templateProcessor';
 import { formatDateTime } from './utils';
@@ -225,8 +225,27 @@ export default class CuboxSyncPlugin extends Plugin {
 							this.settings.filenameTemplate, 
 							fullArticle
 						);
+
+						// 创建或更新文件
+						const filePath = `${this.settings.targetFolder}/${filename}.md`;
 						
-						
+						// 检查相同 id 收藏是否存在
+						const file = this.app.vault.getAbstractFileByPath(filePath);
+						// 如果是 TFile 类型，检查 frontmatter 中的 id
+						if (file instanceof TFile) {
+							let foundMatchingId = false
+							await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+								if (frontmatter.id && frontmatter.id === article.id) {
+									foundMatchingId = true;
+								}
+							});
+
+							if (foundMatchingId) {
+								skipCount++;
+								continue;
+							}
+						}
+									
 						const frontMatter = this.templateProcessor.processFrontMatter(
 							this.settings.frontMatterVariables,
 							fullArticle
@@ -243,16 +262,6 @@ export default class CuboxSyncPlugin extends Plugin {
 							finalContent = `---\n${frontMatter}\n---\n`;
 						}
 						finalContent += contentTemplate;
-						
-						// 创建或更新文件
-						const filePath = `${this.settings.targetFolder}/${filename}.md`;
-						
-						// 检查文件是否已存在，如果设置了跳过已存在文件则跳过
-						if (await this.app.vault.adapter.exists(filePath)) {
-							console.log(`文件已存在，跳过: ${filePath}`);
-							skipCount++;
-							continue;
-						}
 						
 						await this.app.vault.adapter.write(filePath, finalContent);
 						
@@ -629,7 +638,11 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.filenameTemplate = DEFAULT_SETTINGS.filenameTemplate;
 					await this.plugin.saveSettings();
-					this.display(); // 刷新显示
+					// 刷新显示
+					const textComponent = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					if (textComponent) {
+						textComponent.value = DEFAULT_SETTINGS.filenameTemplate;
+					}
 				}));
 		
 		// 为参考链接添加事件监听器
@@ -671,7 +684,11 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.frontMatterVariables = DEFAULT_SETTINGS.frontMatterVariables;
 					await this.plugin.saveSettings();
-					this.display(); // 刷新显示
+					// 刷新显示
+					const textArea = button.buttonEl.parentElement?.parentElement?.querySelector('textarea');
+					if (textArea) {
+						textArea.value = DEFAULT_SETTINGS.frontMatterVariables.join(',');
+					}
 				}));
 
 		// 更新内容模板设置
@@ -698,7 +715,11 @@ class CuboxSyncSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.contentTemplate = DEFAULT_SETTINGS.contentTemplate;
 					await this.plugin.saveSettings();
-					this.display(); // 刷新显示
+					// 刷新显示
+					const textArea = button.buttonEl.parentElement?.parentElement?.querySelector('textarea');
+					if (textArea) {
+						textArea.value = DEFAULT_SETTINGS.contentTemplate;
+					}
 				}));
 
         // 更新日期格式模板设置

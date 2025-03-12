@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxFolder } from '../cuboxApi';
-import { ModalStyleManager } from '../utils/modalStyles';
+import { ModalStyleManager } from './modalStyles';
 
 // 定义一个虚拟的 ALL 文件夹 ID
 export const ALL_FOLDERS_ID = 'all_folders';

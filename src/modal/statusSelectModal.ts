@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import { ModalStyleManager } from '../utils/modalStyles';
+import { ModalStyleManager } from './modalStyles';
 
 export interface ContentStatus {
     id: string;

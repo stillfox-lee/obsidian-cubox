@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import { ModalStyleManager } from '../utils/modalStyles';
+import { ModalStyleManager } from './modalStyles';
 
 // 定义所有可用的内容类型（首字母大写）
 export const ALL_CONTENT_TYPES = [

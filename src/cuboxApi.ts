@@ -73,7 +73,7 @@ export class CuboxApi {
     private apiKey: string;
 
     constructor(domain: string, apiKey: string) {
-        this.endpoint =  'https://test.cubox.pro'//`https://${domain}`;
+        this.endpoint = `https://${domain}`;
         this.apiKey = apiKey;
     }
 
@@ -81,7 +81,7 @@ export class CuboxApi {
      * 同时更新域名和 API Key
      */
     updateConfig(domain: string, apiKey: string): void {
-        this.endpoint = 'https://test.cubox.pro'// `https://${domain}`;
+        this.endpoint = `https://${domain}`;
         this.apiKey = apiKey;
     }
 
