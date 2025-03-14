@@ -2,7 +2,6 @@ import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxTag } from '../cuboxApi';
 import { ModalStyleManager } from './modalStyles';
 
-// 定义虚拟的 ALL 标签 ID 和 NO_TAGS 标签 ID
 export const ALL_ITEMS = 'all_items';
 export const NO_TAGS_ID = '';
 
@@ -38,11 +37,9 @@ export class TagSelectModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         
-        // 设置标题
         contentEl.createEl('h2', { text: 'Manage Cubox tags to be synced' });
         contentEl.addClass('cubox-tag-select-modal');
         
-        // 创建固定的容器结构
         this.listEl = contentEl.createDiv({ cls: 'tag-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
@@ -50,13 +47,11 @@ export class TagSelectModal extends Modal {
         this.createTagList();
         
         // 添加确认和取消按钮
-        // 取消按钮
         const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
-        // 确认按钮
         const confirmButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         confirmButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
@@ -71,12 +66,10 @@ export class TagSelectModal extends Modal {
             this.close();
         });
         
-        // 添加样式
         this.addStyles();
     }
     
     private addStyles() {
-        // 使用通用样式管理器添加样式
         ModalStyleManager.addModalStyles(
             'cubox-tag-modal-styles',
             'cubox-tag-select-modal',
@@ -85,14 +78,12 @@ export class TagSelectModal extends Modal {
     }
 
     private createTagList() {
-        // 清除现有列表
         this.listEl.empty();
         
         // 添加"All Items"选项
         const allItemsSetting = new Setting(this.listEl)
             .setName('All Items');
             
-        // 添加选中状态的类
         if (this.selectedTags.has(ALL_ITEMS)) {
             allItemsSetting.settingEl.addClass('is-selected');
         }
@@ -103,14 +94,6 @@ export class TagSelectModal extends Modal {
             this.handleTagToggle(ALL_ITEMS, !isCurrentlySelected);
             this.redraw();
         });
-        
-        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-        allItemsSetting.addToggle(toggle => toggle
-            .setValue(this.selectedTags.has(ALL_ITEMS))
-            .onChange(value => {
-                this.handleTagToggle(ALL_ITEMS, value);
-                this.redraw();
-            }));
         
         // 添加"No Tags"选项
         const noTagsSetting = new Setting(this.listEl)
@@ -125,21 +108,12 @@ export class TagSelectModal extends Modal {
                 noTagsSetting.settingEl.addClass('is-selected');
             }
             
-            // 添加点击事件
             noTagsSetting.settingEl.addEventListener('click', () => {
                 const isCurrentlySelected = this.selectedTags.has(NO_TAGS_ID);
                 this.handleTagToggle(NO_TAGS_ID, !isCurrentlySelected);
                 this.redraw();
             });
         }
-        
-        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-        noTagsSetting.addToggle(toggle => toggle
-            .setValue(this.selectedTags.has(NO_TAGS_ID))
-            .onChange(value => {
-                this.handleTagToggle(NO_TAGS_ID, value);
-                this.redraw();
-            }));
         
         // 添加每个标签的选项
         this.tags.forEach(tag => {
@@ -155,7 +129,6 @@ export class TagSelectModal extends Modal {
                     tagSetting.settingEl.addClass('is-selected');
                 }
                 
-                // 添加点击事件
                 tagSetting.settingEl.addEventListener('click', () => {
                     const isCurrentlySelected = this.selectedTags.has(tag.id);
                     this.handleTagToggle(tag.id, !isCurrentlySelected);
@@ -163,18 +136,10 @@ export class TagSelectModal extends Modal {
                 });
             }
             
-            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-            tagSetting.addToggle(toggle => toggle
-                .setValue(this.selectedTags.has(tag.id))
-                .onChange(value => {
-                    this.handleTagToggle(tag.id, value);
-                    this.redraw();
-                }));
         });
     }
     
     private isTagSelected(tagId: string): boolean {
-        // 检查特定标签是否被选中
         return this.selectedTags.has(tagId);
     }
 
@@ -185,18 +150,13 @@ export class TagSelectModal extends Modal {
                 this.selectedTags.clear();
                 this.selectedTags.add(ALL_ITEMS);
             } else {
-                // 如果取消了"All Items"，清除它
                 this.selectedTags.delete(ALL_ITEMS);
-                // 不自动选择其他标签，让用户自己选择
             }
         } else {
             if (isSelected) {
-                // 如果选择了特定标签，移除"All Items"
                 this.selectedTags.delete(ALL_ITEMS);
-                // 添加新选择的标签
                 this.selectedTags.add(tagId);
             } else {
-                // 移除取消选择的标签
                 this.selectedTags.delete(tagId);
             }
         }
@@ -210,7 +170,6 @@ export class TagSelectModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        // 使用通用样式管理器移除样式
         ModalStyleManager.removeModalStyles('cubox-tag-modal-styles');
     }
 } 

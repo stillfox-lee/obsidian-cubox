@@ -125,7 +125,6 @@ export class CuboxApi {
         } = { lastCardId: null, lastCardUpdateTime: null }
     ): Promise<{ articles: CuboxArticle[], hasMore: boolean}> {
         try {
-            // 创建请求体对象而不是URL参数
             const requestBody: Record<string, any> = {
                 limit: 50
             };
@@ -203,7 +202,6 @@ export class CuboxApi {
             return response.data;
         } catch (error) {
             console.error(`获取文章 ${articleId} 详情失败:`, error);
-
             return null;
         }
     }
@@ -219,7 +217,6 @@ export class CuboxApi {
             return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 文件夹列表失败:', error);
-            new Notice('Failed to get Cubox folders');
             throw error;
         }
     }
@@ -235,7 +232,6 @@ export class CuboxApi {
             return response.data ?? [];
         } catch (error) {
             console.error('获取 Cubox 标签列表失败:', error);
-            new Notice('Failed to get Cubox tags');
             throw error;
         }
     }

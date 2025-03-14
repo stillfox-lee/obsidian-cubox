@@ -16,7 +16,7 @@ Enter template for creating synced article file name.
 `;
 
 export const metadataVariablesInstructions = `
-Enter the metadata separated by comma. you can also use custom aliases in the format of metadata::alias.
+Enter the metadata separated by comma. you can also use custom aliases in the format of metadata::alias. For syncing purposes, the id will always be included.
 
 <div class="cubox-variables-container">
     <div class="cubox-variables-title">Available variables</div>
@@ -32,7 +32,6 @@ Enter the metadata separated by comma. you can also use custom aliases in the fo
         <li>description</li>
         <li>words_count</li>
         <li>type</li>
-        <li>id</li>
     </ul>
     <div class="cubox-reference">For more, refer to <a href="#" class="reference-link">reference</a>.</div>
 </div>

@@ -2,7 +2,6 @@ import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxFolder } from '../cuboxApi';
 import { ModalStyleManager } from './modalStyles';
 
-// 定义一个虚拟的 ALL 文件夹 ID
 export const ALL_FOLDERS_ID = 'all_folders';
 
 export class FolderSelectModal extends Modal {
@@ -37,11 +36,9 @@ export class FolderSelectModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         
-        // 设置标题
         contentEl.createEl('h2', { text: 'Manage Cubox folders to be synced' });
         contentEl.addClass('cubox-folder-select-modal');
         
-        // 创建固定的容器结构
         this.listEl = contentEl.createDiv({ cls: 'folder-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
@@ -49,13 +46,11 @@ export class FolderSelectModal extends Modal {
         this.createFolderList();
         
         // 添加确认和取消按钮
-        // 取消按钮
         const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
-        // 确认按钮
         const confirmButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         confirmButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
@@ -87,32 +82,20 @@ export class FolderSelectModal extends Modal {
     }
 
     private createFolderList() {
-        // 清除现有列表
         this.listEl.empty();
         
-        // 添加"All Items"选项
         const allItemsSetting = new Setting(this.listEl)
             .setName('All Items');
             
-        // 添加选中状态的类
         if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
             allItemsSetting.settingEl.addClass('is-selected');
         }
         
-        // 添加点击事件
         allItemsSetting.settingEl.addEventListener('click', () => {
             const isCurrentlySelected = this.selectedFolders.has(ALL_FOLDERS_ID);
             this.handleFolderToggle(ALL_FOLDERS_ID, !isCurrentlySelected);
             this.redraw();
         });
-        
-        // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-        allItemsSetting.addToggle(toggle => toggle
-            .setValue(this.selectedFolders.has(ALL_FOLDERS_ID))
-            .onChange(value => {
-                this.handleFolderToggle(ALL_FOLDERS_ID, value);
-                this.redraw();
-            }));
         
         // 添加每个文件夹的选项
         this.folders.forEach(folder => {
@@ -135,19 +118,11 @@ export class FolderSelectModal extends Modal {
                     this.redraw();
                 });
             }
-            
-            // 保留原有的toggle但隐藏它（通过CSS），以保持原有逻辑
-            folderSetting.addToggle(toggle => toggle
-                .setValue(this.selectedFolders.has(folder.id))
-                .onChange(value => {
-                    this.handleFolderToggle(folder.id, value);
-                    this.redraw();
-                }));
+
         });
     }
     
     private isFolderSelected(folderId: string): boolean {
-        // 检查特定文件夹是否被选中
         return this.selectedFolders.has(folderId);
     }
 
@@ -158,18 +133,14 @@ export class FolderSelectModal extends Modal {
                 this.selectedFolders.clear();
                 this.selectedFolders.add(ALL_FOLDERS_ID);
             } else {
-                // 如果取消了"All Items"，清除它
                 this.selectedFolders.delete(ALL_FOLDERS_ID);
-                // 不自动选择其他文件夹，让用户自己选择
             }
         } else {
             if (isSelected) {
                 // 如果选择了特定文件夹，移除"All Items"
                 this.selectedFolders.delete(ALL_FOLDERS_ID);
-                // 添加新选择的文件夹
                 this.selectedFolders.add(folderId);
             } else {
-                // 移除取消选择的文件夹
                 this.selectedFolders.delete(folderId);
             }
         }
@@ -183,7 +154,6 @@ export class FolderSelectModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        // 使用通用样式管理器移除样式
         ModalStyleManager.removeModalStyles('cubox-folder-modal-styles');
     }
 } 

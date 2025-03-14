@@ -42,7 +42,6 @@ export class StatusSelectModal extends Modal {
                 if (id) this.selectedStatuses.add(id);
             });
         } else {
-            // 如果没有初始选择，默认选中"All Items"
             this.selectedStatuses.add(ALL_STATUS_ID);
         }
     }
@@ -50,11 +49,9 @@ export class StatusSelectModal extends Modal {
     async onOpen() {
         const { contentEl } = this;
         
-        // 设置标题和样式
         contentEl.createEl('h2', { text: 'Manage Cubox content status to be synced' });
         contentEl.addClass('cubox-status-select-modal');
         
-        // 创建固定的容器结构
         this.listEl = contentEl.createDiv({ cls: 'status-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
@@ -62,13 +59,11 @@ export class StatusSelectModal extends Modal {
         this.createStatusList();
         
         // 添加底部按钮
-        // 取消按钮
         const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
-        // 保存按钮
         const saveButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
@@ -87,12 +82,10 @@ export class StatusSelectModal extends Modal {
             this.close();
         });
         
-        // 添加样式以固定底部按钮
         this.addStyles();
     }
 
     private addStyles() {
-        // 使用通用样式管理器添加样式
         ModalStyleManager.addModalStyles(
             'cubox-status-modal-styles',
             'cubox-status-select-modal',
@@ -101,7 +94,6 @@ export class StatusSelectModal extends Modal {
     }
 
     private createStatusList() {
-        // 清除现有列表
         this.listEl.empty();
         
         // 添加每个状态的选项
@@ -116,7 +108,6 @@ export class StatusSelectModal extends Modal {
                     statusSetting.settingEl.addClass('is-selected');
                 }
                 
-                // 添加点击事件
                 statusSetting.settingEl.addEventListener('click', () => {
                     const isCurrentlySelected = this.selectedStatuses.has(status.id);
                     this.handleStatusToggle(status.id, !isCurrentlySelected);
@@ -127,12 +118,10 @@ export class StatusSelectModal extends Modal {
                 if (this.selectedStatuses.has(ALL_STATUS_ID)) {
                     statusSetting.settingEl.addClass('is-disabled');
                 } else {
-                    // 添加选中状态的类
                     if (this.selectedStatuses.has(status.id)) {
                         statusSetting.settingEl.addClass('is-selected');
                     }
                     
-                    // 添加点击事件
                     statusSetting.settingEl.addEventListener('click', () => {
                         const isCurrentlySelected = this.selectedStatuses.has(status.id);
                         this.handleStatusToggle(status.id, !isCurrentlySelected);
@@ -164,19 +153,15 @@ export class StatusSelectModal extends Modal {
             if (isSelected) {
                 // 如果选择了其他选项，移除"All Items"
                 this.selectedStatuses.delete(ALL_STATUS_ID);
-                // 添加新选择的状态
                 this.selectedStatuses.add(statusId);
                 
-                // 将所有状态值设为 false，然后将选中的状态值设为 true
                 this.statuses.forEach(status => {
                     if (status.id !== 'all') {
                         this.statusValues.set(status.id, status.id === statusId);
                     }
                 });
             } else {
-                // 移除取消选择的状态
                 this.selectedStatuses.delete(statusId);
-                // 将该状态值设为 false
                 this.statusValues.set(statusId, false);
             }
         }
@@ -190,7 +175,6 @@ export class StatusSelectModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        // 使用通用样式管理器移除样式
         ModalStyleManager.removeModalStyles('cubox-status-modal-styles');
     }
 } 

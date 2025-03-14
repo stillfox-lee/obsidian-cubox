@@ -1,7 +1,6 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { ModalStyleManager } from './modalStyles';
 
-// 定义所有可用的内容类型（首字母大写）
 export const ALL_CONTENT_TYPES = [
     'Article',
     'Snippet',
@@ -40,26 +39,20 @@ export class TypeSelectModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        // 添加标题
-        contentEl.createEl('h2', { text: 'Select Content Types' });
+        contentEl.createEl('h2', { text: 'Manage Cubox content types to be synced' });
         contentEl.addClass('cubox-type-select-modal');
         
-        // 创建类型列表容器
         this.listEl = contentEl.createDiv({ cls: 'type-list-container' });
-        
-        // 创建底部按钮容器
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建类型列表
         this.createTypeList();
         
-        // 添加取消按钮
         const cancelButton = this.footerEl.createEl('button', { text: 'Cancel' });
         cancelButton.addEventListener('click', () => {
             this.close();
         });
         
-        // 添加保存按钮
         const saveButton = this.footerEl.createEl('button', { text: 'Done', cls: 'mod-cta' });
         saveButton.addEventListener('click', () => {
             // 检查是否至少选择了一个选项
@@ -68,18 +61,15 @@ export class TypeSelectModal extends Modal {
                 return;
             }
             
-            // 返回选中的类型
             const selectedTypes = Array.from(this.selectedTypes);
             this.onSave(selectedTypes);
             this.close();
         });
         
-        // 添加样式
         this.addStyles();
     }
 
     private addStyles() {
-        // 使用通用样式管理器添加样式
         ModalStyleManager.addModalStyles(
             'cubox-modal-styles',
             'cubox-type-select-modal',
@@ -99,7 +89,6 @@ export class TypeSelectModal extends Modal {
     }
 
     private createTypeList() {
-        // 清除现有列表
         this.listEl.empty();
         
         // 添加每个类型的选项
@@ -137,10 +126,8 @@ export class TypeSelectModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        // 使用通用样式管理器移除样式
         ModalStyleManager.removeModalStyles('cubox-modal-styles');
         
-        // 移除额外的样式
         const additionalStyleEl = document.getElementById('cubox-type-modal-additional-styles');
         if (additionalStyleEl) additionalStyleEl.remove();
     }

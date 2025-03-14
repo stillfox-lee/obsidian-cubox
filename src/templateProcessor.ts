@@ -1,8 +1,7 @@
 import { CuboxArticle, CuboxHighlight } from './cuboxApi';
 import { formatDateTime, generateSafeFileArticleName } from './utils';
 import Mustache from 'mustache';
-//import * as Mustache from 'mustache';
-import { parseYaml, stringifyYaml } from 'obsidian';
+import { stringifyYaml } from 'obsidian';
 
 export const FRONT_MATTER_VARIABLES = [
     'title',
@@ -21,7 +20,6 @@ export const FRONT_MATTER_VARIABLES = [
     'id'
 ]
 
-// Add these interfaces for the view models
 interface HighlightView {
     id: string;
     text: string;
@@ -57,11 +55,7 @@ interface ArticleView {
 export class TemplateProcessor {
     // 存储日期格式
     private dateFormat: string = 'yyyy-MM-dd';
-    
-    /**
-     * 设置日期格式
-     * @param format 日期格式
-     */
+  
     setDateFormat(format: string): void {
         this.dateFormat = format;
     }
@@ -85,7 +79,6 @@ export class TemplateProcessor {
             domain: article.domain || '',
             type: article.type || '',
             id: article.id || '',
-            // 可以根据需要添加更多字段
         };
         
         let filename = '';
@@ -123,7 +116,6 @@ export class TemplateProcessor {
         }
 
         for (const item of templateVariables) {
-            // split the item into variable and alias
             const aliasedVariables = item.split('::')
             const variable = aliasedVariables[0]
             if (
@@ -137,7 +129,6 @@ export class TemplateProcessor {
       
             const value = (article as any)[variable]
             if (value) {
-              // if variable is in article, use it
               frontMatter[variable] = value
             }
         }
@@ -171,9 +162,8 @@ export class TemplateProcessor {
         // 1. 创建 ArticleView 对象
         const articleView = this.createArticleView(article);
         
-        // 2. 检查模板中是否包含 content_highlighted 字段
+        // 2. 只有当模板中包含 content_highlighted 字段且文章有内容和高亮时才生成高亮内容
         if (template.includes('content_highlighted') && article.content && article.highlights && article.highlights.length > 0) {
-            // 只有当模板中包含 content_highlighted 字段且文章有内容和高亮时才生成高亮内容
             articleView.content_highlighted = this.generateHighlightedContent(article.content, article.highlights);
         }
         
@@ -221,12 +211,14 @@ export class TemplateProcessor {
         // 确保文本和注释正确处理
         let text = highlight.text || '';
         
-        // 处理多行文本，确保每行都有引用符号
-        // 将文本按换行符分割，然后在每行前添加引用符号，最后重新组合
-        if (text.includes('\n')) {
-            // 分割文本为多行
+        // 检查是否为图片高亮
+        if (!text && highlight.image_url) {
+            // 如果文本为空但有图片URL，使用图片作为高亮内容
+            text = `![](${highlight.image_url})`;
+        } else if (text.includes('\n')) {
+            // 处理多行文本，确保每行都有引用符号
+            // 将文本按换行符分割，然后在每行前添加引用符号，最后重新组合
             const lines = text.split('\n');
-            // 为每行添加引用符号（第一行保持原样，因为模板中已经有 > 符号）
             const formattedLines = lines.map((line, index) => {
                 // 第一行不需要添加引用符号
                 if (index === 0) return line;

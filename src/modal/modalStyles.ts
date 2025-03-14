@@ -1,6 +1,4 @@
-/**
- * 模态框样式工具类，用于管理模态框的通用样式
- */
+
 export class ModalStyleManager {
     /**
      * 为模态框添加通用样式
@@ -37,10 +35,7 @@ export class ModalStyleManager {
             .modal-footer button {
                 margin-left: 8px;
             }
-            /* 隐藏原有的 toggle/switch 控件 */
-            .${listContainerClass} .setting-item-control {
-                display: none;
-            }
+        
             /* 调整设置项的布局，为左侧的 checkbox 腾出空间 */
             .${listContainerClass} .setting-item {
                 position: relative;
