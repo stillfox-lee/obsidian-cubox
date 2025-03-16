@@ -10,7 +10,6 @@ export default class CuboxSyncPlugin extends Plugin {
 	cuboxApi: CuboxApi;
 	templateProcessor: TemplateProcessor;
 	syncIntervalId: number;
-	private statusBarItem: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
@@ -29,10 +28,6 @@ export default class CuboxSyncPlugin extends Plugin {
 			await this.syncCubox();
 		});
 		ribbonIconEl.addClass('cubox-sync-ribbon-class');
-
-		// 添加状态栏
-		this.statusBarItem = this.addStatusBarItem();
-		this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()}`);
 
 		// 添加同步命令
 		this.addCommand({
@@ -95,9 +90,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			// 设置同步状态为进行中
 			this.settings.syncing = true;
 			await this.saveSettings();
-			
-			this.statusBarItem.setText(`正在同步 Cubox...`);
-			
+						
 			await this.ensureTargetFolder();
 			
 			let lastCardId: string | null = this.settings.lastSyncCardId;
@@ -211,15 +204,11 @@ export default class CuboxSyncPlugin extends Plugin {
 			this.settings.syncing = false;
 			await this.saveSettings();
 			
-			// 更新状态栏
-			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()}`);
-
 			const message = `Cubox sync completed: ${syncCount} articles synchronized${skipCount > 0 ? `, ${skipCount} skipped` : ''}${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
 			new Notice(message);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);
 			new Notice('Cubox sync failed. Please check settings or network.');
-			this.statusBarItem.setText(`上次同步: ${this.formatLastSyncTime()} (失败)`);
 		} finally {
 			this.settings.syncing = false;
 			await this.saveSettings();

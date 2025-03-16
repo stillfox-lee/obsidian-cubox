@@ -116,24 +116,26 @@ export class TemplateProcessor {
         }
 
         for (const item of templateVariables) {
-            const aliasedVariables = item.split('::')
-            const variable = aliasedVariables[0]
+            const aliasedVariables = item.split('::');
+            const variable = aliasedVariables[0];
+            const alias = aliasedVariables.length > 1 ? aliasedVariables[1] : variable;
+            
             if (
               variable === 'tags' &&
               article.tags &&
               article.tags.length > 0
             ) {
-              frontMatter[variable] = article.tags
-              continue
+              frontMatter[alias] = article.tags;
+              continue;
             }
       
-            const value = (article as any)[variable]
+            const value = (article as any)[variable];
             if (value) {
-              frontMatter[variable] = value
+              frontMatter[alias] = value;
             }
         }
         
-        return stringifyYaml(frontMatter)
+        return stringifyYaml(frontMatter);
     }
 
     /**

@@ -43,9 +43,13 @@ export const formatDateTime = (dateString: string, format: string = 'yyyy-MM-dd 
     if (!dateString) return '';
     
     try {
-        return DateTime.fromISO(dateString).toFormat(format);    
+        const dt = DateTime.fromISO(dateString);
+        if (!dt.isValid) {
+            return dateString; // Return original string for invalid dates
+        }
+        return dt.toFormat(format);    
     } catch (error) {
         console.error('Error formatting date:', error);
-        return dateString;
+        return dateString; // Return original string on error
     }
 };
