@@ -21,7 +21,7 @@ export default class CuboxSyncPlugin extends Plugin {
 
 		// 添加左侧图标
 		const iconId = 'Cubox'
-		addIcon(iconId, '<svg viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_832_147)"><path d="M16.4832 14.9619C16.3985 19.9047 13.3129 19.7653 9.40222 19.7653C5.49152 19.7653 3.46973 18.9255 3.46973 14.6576C3.46973 10.2101 5.49152 6.90909 9.40222 6.90909C13.3129 6.90909 16.4832 10.5144 16.4832 14.9619Z" stroke="currentColor" stroke-width="1.72727"/><rect x="0.863636" y="0.863636" width="17.2727" height="17.2727" rx="8.63636" stroke="currentColor" stroke-width="1.72727"/></g><ellipse cx="6.90905" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><ellipse cx="9.49987" cy="12.2205" rx="0.863636" ry="0.993182" fill="currentColor"/><defs><clipPath id="clip0_832_147"><rect width="19" height="19" rx="9.5" fill="white"/></clipPath></defs></svg>');
+		addIcon(iconId, '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_812_101)"><path d="M20.0858 18.3243C19.9877 24.0475 16.415 23.8861 11.8868 23.8861C7.35861 23.8861 5.01758 22.9138 5.01758 17.9719C5.01758 12.8223 7.35861 9 11.8868 9C16.415 9 20.0858 13.1746 20.0858 18.3243Z" stroke="currentColor" stroke-width="2"/><rect x="2" y="2" width="20" height="20" rx="10" stroke="currentColor" stroke-width="2"/></g><ellipse cx="9" cy="15.15" rx="1" ry="1.15" fill="currentColor"/><ellipse cx="12" cy="15.15" rx="1" ry="1.15" fill="currentColor"/><defs> <clipPath id="clip0_812_101"><rect x="1" y="1" width="22" height="22" rx="11" fill="white"/></clipPath></defs></svg>');
 
 		const ribbonIconEl = this.addRibbonIcon(iconId, iconId, async (evt: MouseEvent) => {
 			new Notice('Syncing your Cubox…');
@@ -32,7 +32,7 @@ export default class CuboxSyncPlugin extends Plugin {
 		// 添加同步命令
 		this.addCommand({
 			id: 'sync-cubox-data',
-			name: 'Sync Cubox Data',
+			name: 'Sync now',
 			callback: async () => {
 				await this.syncCubox();
 			}
@@ -141,12 +141,10 @@ export default class CuboxSyncPlugin extends Plugin {
 							fullArticle
 						);
 
-						// 创建或更新文件
 						const filePath = `${this.settings.targetFolder}/${filename}.md`;
 						
 						// 检查相同 id 收藏是否存在
 						const file = this.app.vault.getAbstractFileByPath(filePath);
-						// 如果是 TFile 类型，检查 frontmatter 中的 id
 						if (file instanceof TFile) {
 							let foundMatchingId = false
 							await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
@@ -204,7 +202,7 @@ export default class CuboxSyncPlugin extends Plugin {
 			this.settings.syncing = false;
 			await this.saveSettings();
 			
-			const message = `Cubox sync completed: ${syncCount} articles synchronized${skipCount > 0 ? `, ${skipCount} skipped` : ''}${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
+			const message = `Cubox sync completed: ${syncCount} new items${skipCount > 0 ? `, ${skipCount} skipped` : ''}${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
 			new Notice(message);
 		} catch (error) {
 			console.error('同步 Cubox 数据失败:', error);

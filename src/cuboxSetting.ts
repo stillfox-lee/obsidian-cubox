@@ -2,7 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type CuboxSyncPlugin from './main';
 import { FRONT_MATTER_VARIABLES } from './templateProcessor';
 import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
-import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat } from './templateInstructions';
+import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat, getFilenameReferenceLink, getMetadataReferenceLink, getContentReferenceLink, getDateReferenceLink } from './templateInstructions';
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { ALL_STATUS_ID, StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_ITEMS, TagSelectModal } from './modal/tagSelectModal';
@@ -65,7 +65,7 @@ export const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	tagsFilter: [ALL_ITEMS],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
-	filenameTemplate: '{{title}}-{{create_time}}',
+	filenameTemplate: '{{{title}}}-{{{create_time}}}',
 	frontMatterVariables: ['id', 'cubox_url', 'url', 'tags'],
 	contentTemplate: DEFAULT_CONTENT_TEMPLATE,
 	highlightInContent: true,
@@ -116,6 +116,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 
 					// 更新 Cubox API 配置
 					this.plugin.updateCuboxApiConfig(value, this.plugin.settings.apiKey);
+					
+					// 更新帮助链接
+					this.updateHelpLinks(value);
 				}));
 
 		// 添加 API Key 设置
@@ -437,7 +440,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				})
 				// 设置文本区域的大小
 				.then(textArea => {
-					textArea.inputEl.rows = 20;
+					textArea.inputEl.rows = 24;
 					textArea.inputEl.cols = 30;
 				}))
 			.addButton(button => button
@@ -472,6 +475,10 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		containerEl.createEl('h3', {text: 'Status'});
 		containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
 
+		// 初始化帮助链接
+		setTimeout(() => {
+			this.updateHelpLinks(this.plugin.settings.domain);
+		}, 100);
 	}
 
 	// 更新 API Key 设置的描述和状态
@@ -513,6 +520,23 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 			
 			textComponent.inputEl.disabled = false;
 		}
+	}
+
+	// 更新帮助文档链接
+	private updateHelpLinks(domain: string): void {
+		// 查找所有需要更新的元素并更新
+		const updateDomainReference = (selector: string, getLinkFunction: (domain: string) => string) => {
+			const element = document.querySelector(selector);
+			if (element) {
+				element.innerHTML = getLinkFunction(domain);
+			}
+		};
+
+		// 更新各个引用链接
+		updateDomainReference('.domain-reference-filename', getFilenameReferenceLink);
+		updateDomainReference('.domain-reference-metadata', getMetadataReferenceLink);
+		updateDomainReference('.domain-reference-content', getContentReferenceLink);
+		updateDomainReference('.domain-reference-date', getDateReferenceLink);
 	}
 
 	private getFolderFilterButtonText(): string {
