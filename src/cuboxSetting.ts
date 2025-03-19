@@ -2,7 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type CuboxSyncPlugin from './main';
 import { FRONT_MATTER_VARIABLES } from './templateProcessor';
 import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
-import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat, getFilenameReferenceLink, getMetadataReferenceLink, getContentReferenceLink, getDateReferenceLink } from './templateInstructions';
+import { filenameTemplateInstructions, metadataVariablesInstructions, contentTemplateInstructions, cuboxDateFormat, getFilenameReferenceLink, getMetadataReferenceLink, getContentReferenceLink, getDateReferenceLink, getInstructionUrl } from './templateInstructions';
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { ALL_STATUS_ID, StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_ITEMS, TagSelectModal } from './modal/tagSelectModal';
@@ -528,7 +528,34 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const updateDomainReference = (selector: string, getLinkFunction: (domain: string) => string) => {
 			const element = document.querySelector(selector);
 			if (element) {
-				element.innerHTML = getLinkFunction(domain);
+				element.empty();
+				
+				// 创建包含文本的span元素
+				const textSpan = element.createSpan({
+					text: "For more, refer to "
+				});
+				
+				// 从getLinkFunction获取URL
+				const url = domain ? getInstructionUrl(domain, selector.includes('filename') ? 'filename' : 
+					selector.includes('metadata') ? 'metadata' : 
+					selector.includes('content') ? 'content' : 'date') : '#';
+				
+				// 创建链接元素
+				const linkEl = textSpan.createEl('a', {
+					text: "reference",
+					cls: "reference-link",
+					href: url
+				});
+				
+				// 如果有域名，添加target属性
+				if (domain) {
+					linkEl.setAttribute('target', '_blank');
+				}
+				
+				// 添加句号
+				textSpan.createSpan({
+					text: "."
+				});
 			}
 		};
 
