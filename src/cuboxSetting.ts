@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting, TextComponent } from 'obsidian';
 import type CuboxSyncPlugin from './main';
 import { FRONT_MATTER_VARIABLES } from './templateProcessor';
 import { ALL_FOLDERS_ID, FolderSelectModal } from './modal/folderSelectModal';
@@ -484,7 +484,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	// 更新 API Key 设置的描述和状态
 	private updateApiKeySetting(): void {
 		const domain = this.plugin.settings.domain;
-		const textComponent = this.apiKeySetting.components[0] as any;
+		const textComponent = this.apiKeySetting.components[0] as TextComponent;
 		
 		if (!domain) {
 			// 未选择域名
