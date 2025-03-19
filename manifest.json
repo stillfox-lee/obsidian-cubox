@@ -1,7 +1,7 @@
 {
 	"id": "cubox-sync",
 	"name": "Cubox",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Sync your Cubox articles & annotation",
 	"author": "delphi-2015",
