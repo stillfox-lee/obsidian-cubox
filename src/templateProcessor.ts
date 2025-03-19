@@ -129,7 +129,7 @@ export class TemplateProcessor {
               continue;
             }
       
-            const value = (article as any)[variable];
+            const value = this.getArticleProperty(article, variable);
             if (value) {
               frontMatter[alias] = value;
             }
@@ -307,5 +307,10 @@ export class TemplateProcessor {
         }
         
         return highlightedContent;
+    }
+
+    // 类型安全的辅助函数
+    private getArticleProperty(article: CuboxArticle, propertyName: string): unknown {
+        return (article as unknown as Record<string, unknown>)[propertyName];
     }
 } 
