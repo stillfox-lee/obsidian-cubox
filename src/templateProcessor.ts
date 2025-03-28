@@ -313,4 +313,22 @@ export class TemplateProcessor {
     private getArticleProperty(article: CuboxArticle, propertyName: string): unknown {
         return (article as unknown as Record<string, unknown>)[propertyName];
     }
+
+    /**
+     * 检查模板是否需要文章内容
+     * @param template 内容模板
+     * @returns 是否需要请求文章内容
+     */
+    needsArticleContent(template: string): boolean {
+        // 如果没有模板，但默认模板会输出文章内容，所以需要内容
+        if (!template) {
+            return true;
+        }
+        
+        // 检查模板中是否包含需要文章内容的变量
+        return template.includes('{{content}}') || 
+               template.includes('{{{content}}}') || 
+               template.includes('{{content_highlighted}}') || 
+               template.includes('{{{content_highlighted}}}');
+    }
 } 

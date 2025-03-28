@@ -117,6 +117,9 @@ export default class CuboxSyncPlugin extends Plugin {
 				);
 				
 				const { articles, hasMore: moreArticles} = result;
+
+				// 检查内容模板是否需要文章内容
+				const needsContent = this.templateProcessor.needsArticleContent(this.settings.contentTemplate);
 				
 				if (articles.length === 0) {
 					break;
@@ -125,15 +128,14 @@ export default class CuboxSyncPlugin extends Plugin {
 				// 处理每篇文章
 				for (const article of articles) {
 					try {
-						// 获取文章内容
-						const content = await this.cuboxApi.getArticleDetail(article.id);
-						if (content === null) continue;
+						let fullArticle = {...article};
 						
-						// 合并文章基本信息、内容和高亮
-						const fullArticle = {
-							...article,
-							content: content
-						};
+						if (needsContent) {
+							const content = await this.cuboxApi.getArticleDetail(article.id);
+							if (content === null) continue;
+							
+							fullArticle.content = content;
+						}
 						
 						// 处理文件名和内容
 						const filename = this.templateProcessor.processFilenameTemplate(
