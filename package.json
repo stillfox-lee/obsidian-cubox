@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-cubox",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "This is a cubox plugin for Obsidian (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {

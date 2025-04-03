@@ -374,14 +374,14 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 					this.plugin.settings.filenameTemplate = value;
 					await this.plugin.saveSettings();
 				}))
-			.addButton(button => button
+			.addExtraButton(button => button
 				.setIcon('reset')
 				.setTooltip('Reset to default')
 				.onClick(async () => {
 					this.plugin.settings.filenameTemplate = DEFAULT_SETTINGS.filenameTemplate;
 					await this.plugin.saveSettings();
 					// 刷新显示
-					const textComponent = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					const textComponent = button.extraSettingsEl.parentElement?.parentElement?.querySelector('input');
 					if (textComponent) {
 						textComponent.value = DEFAULT_SETTINGS.filenameTemplate;
 					}
@@ -412,18 +412,20 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 					textArea.inputEl.rows = 20;
 					textArea.inputEl.cols = 30;
 				}))
-			.addButton(button => button
-				.setIcon('reset')
-				.setTooltip('Reset to default')
-				.onClick(async () => {
-					this.plugin.settings.frontMatterVariables = DEFAULT_SETTINGS.frontMatterVariables;
-					await this.plugin.saveSettings();
-					// 刷新显示
-					const textArea = button.buttonEl.parentElement?.parentElement?.querySelector('textarea');
-					if (textArea) {
-						textArea.value = DEFAULT_SETTINGS.frontMatterVariables.join(',');
-					}
-				}));
+			.addExtraButton(button => {
+				button
+				     .setIcon('reset')
+				     .setTooltip('Reset to default')
+				     .onClick(async () => {
+						this.plugin.settings.frontMatterVariables = DEFAULT_SETTINGS.frontMatterVariables;
+						await this.plugin.saveSettings();
+						// 刷新显示
+						const textArea = button.extraSettingsEl.parentElement?.parentElement?.querySelector('textarea');
+						if (textArea) {
+							textArea.value = DEFAULT_SETTINGS.frontMatterVariables.join(',');
+						}
+				});
+			});
 
 		// 更新内容模板设置
 		const contentInstructionsFragment = document.createRange().createContextualFragment(contentTemplateInstructions);
@@ -443,18 +445,20 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 					textArea.inputEl.rows = 24;
 					textArea.inputEl.cols = 30;
 				}))
-			.addButton(button => button
-				.setIcon('reset')
-				.setTooltip('Reset to default')
-				.onClick(async () => {
-					this.plugin.settings.contentTemplate = DEFAULT_SETTINGS.contentTemplate;
-					await this.plugin.saveSettings();
-					// 刷新显示
-					const textArea = button.buttonEl.parentElement?.parentElement?.querySelector('textarea');
-					if (textArea) {
-						textArea.value = DEFAULT_SETTINGS.contentTemplate;
-					}
-				}));
+			.addExtraButton(button => {
+				button
+					.setIcon('reset')
+					.setTooltip('Reset to default')
+					.onClick(async () => {
+						this.plugin.settings.contentTemplate = DEFAULT_SETTINGS.contentTemplate;
+						await this.plugin.saveSettings();
+						// 刷新显示
+						const textArea = button.extraSettingsEl.parentElement?.parentElement?.querySelector('textarea');
+						if (textArea) {
+							textArea.value = DEFAULT_SETTINGS.contentTemplate;
+						}
+					})
+			});
 
         // 更新日期格式模板设置
         const dateFormatInstructionsFragment = document.createRange().createContextualFragment(cuboxDateFormat);
