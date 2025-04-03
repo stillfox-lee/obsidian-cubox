@@ -44,3 +44,86 @@ jobs:
             --title="$tag" \
             --draft \
             main.js manifest.json styles.css
+
+      - name: Send Notification
+        if: always()
+        env:
+          NOTIFY_WEBHOOK: ${{ vars.NOTIFY_WEBHOOK }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          
+          # 根据任务状态设置消息内容
+          if [ "${{ job.status }}" = "success" ]; then
+            status_emoji="✅"
+            status_text="成功"
+            button_text="🔍 确认发布"
+            header_emoji="🎉"
+            template_color="blue"
+            action_url="https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"
+          else
+            status_emoji="❌"
+            status_text="失败"
+            button_text="🔍 查看失败详情"
+            header_emoji="⚠️"
+            template_color="red"
+            action_url="https://github.com/$GITHUB_REPOSITORY/actions/runs/${{ github.run_id }}"
+          fi
+          
+          # 构建飞书消息
+          curl -X POST -H "Content-Type: application/json" -d "{
+            \"msg_type\": \"interactive\",
+            \"card\": {
+              \"schema\": \"2.0\",
+              \"config\": {
+                \"update_multi\": true,
+                \"style\": {
+                  \"text_size\": {
+                    \"normal_v2\": {
+                      \"default\": \"normal\",
+                      \"pc\": \"normal\",
+                      \"mobile\": \"heading\"
+                    }
+                  }
+                }
+              },
+              \"body\": {
+                \"direction\": \"vertical\",
+                \"padding\": \"12px 12px 12px 12px\",
+                \"elements\": [
+                  {
+                    \"tag\": \"markdown\",
+                    \"content\": \"📦 **${repo_name}** 新版本 **${tag}** 构建${status_text}\\n构建状态：${status_emoji} ${status_text}\",
+                    \"text_align\": \"left\",
+                    \"text_size\": \"normal_v2\",
+                    \"margin\": \"0px 0px 0px 0px\"
+                  },
+                  {
+                    \"tag\": \"button\",
+                    \"text\": {
+                      \"tag\": \"plain_text\",
+                      \"content\": \"${button_text}\"
+                    },
+                    \"type\": \"default\",
+                    \"width\": \"default\",
+                    \"size\": \"medium\",
+                    \"behaviors\": [
+                      {
+                        \"type\": \"open_url\",
+                        \"default_url\": \"${action_url}\"
+                      }
+                    ],
+                    \"margin\": \"0px 0px 0px 0px\"
+                  }
+                ]
+              },
+              \"header\": {
+                \"title\": {
+                  \"tag\": \"plain_text\",
+                  \"content\": \"${header_emoji} 插件构建通知\"
+                },
+                \"template\": \"${template_color}\",
+                \"padding\": \"12px 12px 12px 12px\"
+              }
+            }
+          }" "$NOTIFY_WEBHOOK"
