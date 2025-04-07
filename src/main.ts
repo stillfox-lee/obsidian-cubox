@@ -1,4 +1,4 @@
-import { addIcon, Notice, Plugin, TFile } from 'obsidian';
+import { addIcon, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { CuboxApi } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatDateTime } from './utils';
@@ -50,10 +50,6 @@ export default class CuboxSyncPlugin extends Plugin {
 		if (this.syncIntervalId) {
 			window.clearInterval(this.syncIntervalId);
 		}
-
-		// 移除样式
-		const styleEl = document.getElementById('cubox-sync-styles');
-		if (styleEl) styleEl.remove();
 	}
 
 	async loadSettings() {
@@ -83,6 +79,12 @@ export default class CuboxSyncPlugin extends Plugin {
 	async syncCubox() {
 		if (this.settings.syncing) {
 			new Notice('Sync is in progress, please wait.');
+			return;
+		}
+		
+		// Check if filters are configured
+		if (this.settings.folderFilter.length === 0 || this.settings.typeFilter.length === 0 || this.settings.statusFilter.length === 0 || this.settings.tagsFilter.length === 0)  {
+			new Notice('Please select the filter first');
 			return;
 		}
 		
@@ -149,11 +151,11 @@ export default class CuboxSyncPlugin extends Plugin {
 						const file = this.app.vault.getAbstractFileByPath(filePath);
 						if (file instanceof TFile) {
 							let foundMatchingId = false
-							await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-								if (frontmatter.id && frontmatter.id === article.id) {
-									foundMatchingId = true;
-								}
-							});
+							const itemId = this.app.metadataCache.getFileCache(file)?.frontmatter?.id
+							if (itemId && itemId === article.id) {	
+								foundMatchingId = true;
+								console.log('found matching id', itemId, article.id);
+							}
 
 							if (foundMatchingId) {
 								skipCount++;
@@ -178,7 +180,7 @@ export default class CuboxSyncPlugin extends Plugin {
 						}
 						finalContent += contentTemplate;
 						
-						await this.app.vault.adapter.write(filePath, finalContent);
+						await this.app.vault.create(filePath, finalContent);
 						
 						syncCount++;
 					
@@ -216,15 +218,16 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async ensureTargetFolder() {
-		const folderPath = this.settings.targetFolder;
-		if (!(await this.app.vault.adapter.exists(folderPath))) {
-			await this.app.vault.createFolder(folderPath);
+		const folderName = this.settings.targetFolder;
+		const cuboxFolder = this.app.vault.getAbstractFileByPath(folderName)
+		if (!(cuboxFolder instanceof TFolder)) {
+			await this.app.vault.createFolder(folderName)
 		}
 	}
 
 	formatLastSyncTime(): string {
 		if (!this.settings.lastSyncTime) {
-			return 'Never';
+			return 'never';
 		}
 		
 		return formatDateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');

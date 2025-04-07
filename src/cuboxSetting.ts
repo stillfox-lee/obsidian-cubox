@@ -6,6 +6,7 @@ import { filenameTemplateInstructions, metadataVariablesInstructions, contentTem
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { ALL_STATUS_ID, StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_ITEMS, TagSelectModal } from './modal/tagSelectModal';
+import { normalizePath } from 'obsidian';
 
 export const DEFAULT_CONTENT_TEMPLATE = `# {{{title}}}
 
@@ -56,13 +57,13 @@ export interface CuboxSyncSettings {
 export const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	domain: '', 
 	apiKey: '',
-	folderFilter: [ALL_FOLDERS_ID],
-	typeFilter: ALL_CONTENT_TYPES,
-	statusFilter: [ALL_STATUS_ID],
+	folderFilter: [],
+	typeFilter: [],
+	statusFilter: [],
 	isRead: true,
 	isStarred: true,
 	isAnnotated: true,
-	tagsFilter: [ALL_ITEMS],
+	tagsFilter: [],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{{title}}}-{{{create_time}}}',
@@ -89,21 +90,16 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
-
-		// 添加 Cubox 标题和版本信息
-		new Setting(containerEl)
-			.setName('Cubox')
-			.setDesc(`Created by Cubox, version ${this.plugin.manifest.version}`)
 		
 		// 连接设置部分
-		containerEl.createEl('h3', {text: 'Connect Obsidian to Your Cubox'});
+		new Setting(containerEl).setName('Connect obsidian to your Cubox').setHeading();
 
 		// 修改域名选择下拉框
 		new Setting(containerEl)
-			.setName('Cubox Server Domain')
+			.setName('Cubox server domain')
 			.setDesc('Select the correct domain name of the Cubox you are using.')
 			.addDropdown(dropdown => dropdown
-				.addOption('', 'Choose Region')
+				.addOption('', 'Choose region')
 				.addOption('cubox.cc', 'cubox.cc (international)')
 				.addOption('cubox.pro', 'cubox.pro')
 				.setValue(this.plugin.settings.domain)
@@ -123,7 +119,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 
 		// 添加 API Key 设置
 		this.apiKeySetting = new Setting(containerEl)
-			.setName('Your Cubox API Key')
+			.setName('Your Cubox API key')
 			.setDesc('Please select a region first')
 			.addText(text => {
 				text.setPlaceholder('Enter your API key')
@@ -172,10 +168,10 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		this.updateApiKeySetting();
 
 		// 过滤器设置部分
-		containerEl.createEl('h3', {text: 'Filter'});
+		new Setting(containerEl).setName('Filter').setHeading();
 
 		new Setting(containerEl)
-			.setName('Folder Filter')
+			.setName('Folder filter')
 			.setDesc('Manage Cubox folders to be synced')
 			.addButton(button => button
 				.setButtonText(this.getFolderFilterButtonText())
@@ -217,7 +213,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Tag Filter')	
+			.setName('Tag filter')	
 			.setDesc('Manage Cubox tags to be synced')
 			.addButton(button => button
 				.setButtonText(this.getTagFilterButtonText())
@@ -259,7 +255,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Type Filter')
+			.setName('Type filter')
 			.setDesc('Manage Cubox content types to be synced')
 			.addButton(button => button
 				.setButtonText(this.getTypeFilterButtonText())
@@ -285,7 +281,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Status Filter')
+			.setName('Status filter')
 			.setDesc('Manage Cubox content status to be synced')
 			.addButton(button => button
 				.setButtonText(this.getStatusFilterButtonText())
@@ -323,10 +319,10 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// 同步设置部分
-		containerEl.createEl('h3', {text: 'Sync'});
+		new Setting(containerEl).setName('Sync').setHeading();
 
 		new Setting(containerEl)
-			.setName('Sync Interval')
+			.setName('Sync interval')
 			.setDesc('Auto sync interval (in minutes). 0 means manual sync. Each item syncs only once. Subsequent updates won\'t be synced, and modifications in Obsidian won\'t affect Cubox. We recommend avoiding frequent updates.')
 			.addText(text => {
 				const textField = text
@@ -357,7 +353,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.targetFolder)
 				.onChange(async (value) => {
 					this.plugin.settings.lastSyncCardId = null;
-					this.plugin.settings.targetFolder = value;
+					this.plugin.settings.targetFolder = normalizePath(value);
 					await this.plugin.saveSettings();
 				}));
 
@@ -365,7 +361,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const filenameInstructionsFragment = document.createRange().createContextualFragment(filenameTemplateInstructions);
 
 		new Setting(containerEl)
-			.setName('File Name Template')
+			.setName('File name template')
 			.setDesc(filenameInstructionsFragment)
 			.addText(text => text
 				.setPlaceholder('Enter file name template')
@@ -391,7 +387,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const metadataInstructionsFragment = document.createRange().createContextualFragment(metadataVariablesInstructions);
 
 		new Setting(containerEl)
-			.setName('Metadata Variables')
+			.setName('Metadata variables')
 			.setDesc(metadataInstructionsFragment)
 			.addTextArea(text => text
 				.setPlaceholder('Enter front matter variables')
@@ -431,7 +427,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const contentInstructionsFragment = document.createRange().createContextualFragment(contentTemplateInstructions);
 
 		new Setting(containerEl)
-			.setName('Content Template')
+			.setName('Content template')
 			.setDesc(contentInstructionsFragment)
 			.addTextArea(text => text
 				.setPlaceholder('Enter content template')
@@ -464,7 +460,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
         const dateFormatInstructionsFragment = document.createRange().createContextualFragment(cuboxDateFormat);
 
         new Setting(containerEl)
-            .setName('Date Format')
+            .setName('Date format')
             .setDesc(dateFormatInstructionsFragment)
             .addText(text => text
 				.setPlaceholder('Enter date format')
@@ -476,8 +472,8 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 				
 		// 状态部分
-		containerEl.createEl('h3', {text: 'Status'});
-		containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
+		new Setting(containerEl).setName('Status').setHeading();
+		new Setting(containerEl).setDesc(`Last sync: ${this.plugin.formatLastSyncTime()}`);
 
 		// 初始化帮助链接
 		setTimeout(() => {
@@ -573,9 +569,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getFolderFilterButtonText(): string {
 		const folderFilters = this.plugin.settings.folderFilter;
 		if (!folderFilters || folderFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (folderFilters.includes(ALL_FOLDERS_ID)) {
-			return 'All Folders';
+			return 'All folders';
 		} else {
 			return `${folderFilters.length} selected`;
 		}
@@ -584,9 +580,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getTypeFilterButtonText(): string {
 		const typeFilters = this.plugin.settings.typeFilter;
 		if (!typeFilters || typeFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (typeFilters.length === ALL_CONTENT_TYPES.length) {
-			return 'All Types';
+			return 'All types';
 		} else {
 			return `${typeFilters.length} selected`;
 		}
@@ -595,9 +591,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getStatusFilterButtonText(): string {
 		const statusFilters = this.plugin.settings.statusFilter;
 		if (!statusFilters || statusFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (statusFilters.includes('all')) {
-			return 'All Items';
+			return 'All items';
 		} else {
 			return `${statusFilters.length} selected`;
 		}
@@ -606,11 +602,11 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getTagFilterButtonText(): string {
 		const tagFilters = this.plugin.settings.tagsFilter;
 		if (!tagFilters || tagFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (tagFilters.includes(ALL_ITEMS)) {
-			return 'All Items';
+			return 'All items';
 		} else if (tagFilters.includes('')) {
-			return 'No Tags';
+			return 'No tags';
 		} else {
 			return `${tagFilters.length} selected`;
 		}

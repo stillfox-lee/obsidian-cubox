@@ -1,5 +1,4 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import { ModalStyleManager } from './modalStyles';
 
 export interface ContentStatus {
     id: string;
@@ -11,7 +10,7 @@ export const ALL_STATUS_ID = 'all';
 
 export class StatusSelectModal extends Modal {
     private statuses: ContentStatus[] = [
-        { id: 'all', name: 'All Items' },
+        { id: 'all', name: 'All items' },
         { id: 'read', name: 'Already read items only', value: true },
         { id: 'starred', name: 'Starred items only', value: true },
         { id: 'annotated', name: 'Annotated items only', value: true }
@@ -41,8 +40,6 @@ export class StatusSelectModal extends Modal {
             initialSelected.forEach(id => {
                 if (id) this.selectedStatuses.add(id);
             });
-        } else {
-            this.selectedStatuses.add(ALL_STATUS_ID);
         }
     }
 
@@ -50,9 +47,9 @@ export class StatusSelectModal extends Modal {
         const { contentEl } = this;
         
         contentEl.createEl('h2', { text: 'Manage Cubox content status to be synced' });
-        contentEl.addClass('cubox-status-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'status-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'status-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建状态列表
@@ -81,16 +78,6 @@ export class StatusSelectModal extends Modal {
             this.onSave(selectedIds, statusValues);
             this.close();
         });
-        
-        this.addStyles();
-    }
-
-    private addStyles() {
-        ModalStyleManager.addModalStyles(
-            'cubox-status-modal-styles',
-            'cubox-status-select-modal',
-            'status-list-container'
-        );
     }
 
     private createStatusList() {
@@ -139,10 +126,10 @@ export class StatusSelectModal extends Modal {
                 this.selectedStatuses.clear();
                 this.selectedStatuses.add(ALL_STATUS_ID);
                 
-                // 当选择 All 时，所有状态值设为 true
+                // 当选择 All 时，所有状态值设为 false
                 this.statuses.forEach(status => {
                     if (status.id !== 'all') {
-                        this.statusValues.set(status.id, true);
+                        this.statusValues.set(status.id, false);
                     }
                 });
             } else {
@@ -154,16 +141,10 @@ export class StatusSelectModal extends Modal {
                 // 如果选择了其他选项，移除"All Items"
                 this.selectedStatuses.delete(ALL_STATUS_ID);
                 this.selectedStatuses.add(statusId);
-                
-                this.statuses.forEach(status => {
-                    if (status.id !== 'all') {
-                        this.statusValues.set(status.id, status.id === statusId);
-                    }
-                });
             } else {
                 this.selectedStatuses.delete(statusId);
-                this.statusValues.set(statusId, false);
             }
+            this.statusValues.set(statusId, isSelected);
         }
     }
 
@@ -174,7 +155,5 @@ export class StatusSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-status-modal-styles');
     }
 } 

@@ -1,6 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxTag } from '../cuboxApi';
-import { ModalStyleManager } from './modalStyles';
 
 export const ALL_ITEMS = 'all_items';
 export const NO_TAGS_ID = '';
@@ -26,9 +25,6 @@ export class TagSelectModal extends Modal {
             initialSelectedTags.forEach(id => {
                 this.selectedTags.add(id);
             });
-        } else {
-            // 如果没有初始选择，默认选中"All Items"
-            this.selectedTags.add(ALL_ITEMS);
         }
         
         this.onConfirm = onConfirm;
@@ -38,9 +34,9 @@ export class TagSelectModal extends Modal {
         const { contentEl } = this;
         
         contentEl.createEl('h2', { text: 'Manage Cubox tags to be synced' });
-        contentEl.addClass('cubox-tag-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'tag-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'tag-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建标签列表
@@ -65,16 +61,6 @@ export class TagSelectModal extends Modal {
             this.onConfirm(resultTags);
             this.close();
         });
-        
-        this.addStyles();
-    }
-    
-    private addStyles() {
-        ModalStyleManager.addModalStyles(
-            'cubox-tag-modal-styles',
-            'cubox-tag-select-modal',
-            'tag-list-container'
-        );
     }
 
     private createTagList() {
@@ -82,7 +68,7 @@ export class TagSelectModal extends Modal {
         
         // 添加"All Items"选项
         const allItemsSetting = new Setting(this.listEl)
-            .setName('All Items');
+            .setName('All items');
             
         if (this.selectedTags.has(ALL_ITEMS)) {
             allItemsSetting.settingEl.addClass('is-selected');
@@ -97,7 +83,7 @@ export class TagSelectModal extends Modal {
         
         // 添加"No Tags"选项
         const noTagsSetting = new Setting(this.listEl)
-            .setName('No Tags');
+            .setName('No tags');
             
         // 如果"All Items"被选中，禁用其他选项
         if (this.selectedTags.has(ALL_ITEMS)) {
@@ -169,7 +155,5 @@ export class TagSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-tag-modal-styles');
     }
 } 

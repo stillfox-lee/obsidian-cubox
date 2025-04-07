@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { normalizePath } from 'obsidian';
 
 // 文件名非法字符正则表达式
 export const ILLEGAL_CHAR_REGEX_FILE = /[<>:"/\\|?*\u0000-\u001F]/g;
@@ -30,7 +31,7 @@ export const replaceIllegalCharsFolder = (str: string): string => {
  */
 export const generateSafeFileArticleName = (title: string): string => {
     const safeTitle = replaceIllegalCharsFile(title).trim();
-    return safeTitle;
+    return normalizePath(safeTitle);
 };
 
 /**
