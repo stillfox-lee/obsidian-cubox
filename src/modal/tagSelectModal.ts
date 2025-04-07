@@ -71,7 +71,7 @@ export class TagSelectModal extends Modal {
         
         // 添加"All Items"选项
         const allItemsSetting = new Setting(this.listEl)
-            .setName('All Items');
+            .setName('All items');
             
         if (this.selectedTags.has(ALL_ITEMS)) {
             allItemsSetting.settingEl.addClass('is-selected');
@@ -86,7 +86,7 @@ export class TagSelectModal extends Modal {
         
         // 添加"No Tags"选项
         const noTagsSetting = new Setting(this.listEl)
-            .setName('No Tags');
+            .setName('No tags');
             
         // 如果"All Items"被选中，禁用其他选项
         if (this.selectedTags.has(ALL_ITEMS)) {

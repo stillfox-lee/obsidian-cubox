@@ -10,7 +10,7 @@ export const ALL_STATUS_ID = 'all';
 
 export class StatusSelectModal extends Modal {
     private statuses: ContentStatus[] = [
-        { id: 'all', name: 'All Items' },
+        { id: 'all', name: 'All items' },
         { id: 'read', name: 'Already read items only', value: true },
         { id: 'starred', name: 'Starred items only', value: true },
         { id: 'annotated', name: 'Annotated items only', value: true }

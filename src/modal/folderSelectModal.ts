@@ -72,7 +72,7 @@ export class FolderSelectModal extends Modal {
         this.listEl.empty();
         
         const allItemsSetting = new Setting(this.listEl)
-            .setName('All Items');
+            .setName('All items');
             
         if (this.selectedFolders.has(ALL_FOLDERS_ID)) {
             allItemsSetting.settingEl.addClass('is-selected');
