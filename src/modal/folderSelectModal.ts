@@ -1,6 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxFolder } from '../cuboxApi';
-import { ModalStyleManager } from './modalStyles';
 
 export const ALL_FOLDERS_ID = 'all_folders';
 
@@ -37,9 +36,9 @@ export class FolderSelectModal extends Modal {
         const { contentEl } = this;
         
         contentEl.createEl('h2', { text: 'Manage Cubox folders to be synced' });
-        contentEl.addClass('cubox-folder-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'folder-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'folder-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建文件夹列表
@@ -67,18 +66,6 @@ export class FolderSelectModal extends Modal {
             this.onConfirm(resultFolders);
             this.close();
         });
-        
-        // 添加样式
-        this.addStyles();
-    }
-    
-    private addStyles() {
-        // 使用通用样式管理器添加样式
-        ModalStyleManager.addModalStyles(
-            'cubox-folder-modal-styles',
-            'cubox-folder-select-modal',
-            'folder-list-container'
-        );
     }
 
     private createFolderList() {
@@ -153,7 +140,5 @@ export class FolderSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-folder-modal-styles');
     }
 } 

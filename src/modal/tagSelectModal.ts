@@ -1,6 +1,5 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import { CuboxTag } from '../cuboxApi';
-import { ModalStyleManager } from './modalStyles';
 
 export const ALL_ITEMS = 'all_items';
 export const NO_TAGS_ID = '';
@@ -38,9 +37,9 @@ export class TagSelectModal extends Modal {
         const { contentEl } = this;
         
         contentEl.createEl('h2', { text: 'Manage Cubox tags to be synced' });
-        contentEl.addClass('cubox-tag-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'tag-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'tag-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建标签列表
@@ -65,16 +64,6 @@ export class TagSelectModal extends Modal {
             this.onConfirm(resultTags);
             this.close();
         });
-        
-        this.addStyles();
-    }
-    
-    private addStyles() {
-        ModalStyleManager.addModalStyles(
-            'cubox-tag-modal-styles',
-            'cubox-tag-select-modal',
-            'tag-list-container'
-        );
     }
 
     private createTagList() {
@@ -169,7 +158,5 @@ export class TagSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-tag-modal-styles');
     }
 } 

@@ -1,5 +1,4 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import { ModalStyleManager } from './modalStyles';
 
 export interface ContentStatus {
     id: string;
@@ -50,9 +49,9 @@ export class StatusSelectModal extends Modal {
         const { contentEl } = this;
         
         contentEl.createEl('h2', { text: 'Manage Cubox content status to be synced' });
-        contentEl.addClass('cubox-status-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'status-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'status-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建状态列表
@@ -81,16 +80,6 @@ export class StatusSelectModal extends Modal {
             this.onSave(selectedIds, statusValues);
             this.close();
         });
-        
-        this.addStyles();
-    }
-
-    private addStyles() {
-        ModalStyleManager.addModalStyles(
-            'cubox-status-modal-styles',
-            'cubox-status-select-modal',
-            'status-list-container'
-        );
     }
 
     private createStatusList() {
@@ -174,7 +163,5 @@ export class StatusSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-status-modal-styles');
     }
 } 

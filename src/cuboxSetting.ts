@@ -90,14 +90,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
-
-		// 添加 Cubox 标题和版本信息
-		new Setting(containerEl)
-			.setName('Cubox')
-			.setDesc(`Created by Cubox, version ${this.plugin.manifest.version}`)
 		
 		// 连接设置部分
-		containerEl.createEl('h3', {text: 'Connect Obsidian to Your Cubox'});
+		new Setting(containerEl).setName('Connect Obsidian to Your Cubox').setHeading();
 
 		// 修改域名选择下拉框
 		new Setting(containerEl)
@@ -173,7 +168,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		this.updateApiKeySetting();
 
 		// 过滤器设置部分
-		containerEl.createEl('h3', {text: 'Filter'});
+		new Setting(containerEl).setName('Filter').setHeading();
 
 		new Setting(containerEl)
 			.setName('Folder Filter')
@@ -324,7 +319,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// 同步设置部分
-		containerEl.createEl('h3', {text: 'Sync'});
+		new Setting(containerEl).setName('Sync').setHeading();
 
 		new Setting(containerEl)
 			.setName('Sync Interval')
@@ -477,8 +472,9 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				}));
 				
 		// 状态部分
-		containerEl.createEl('h3', {text: 'Status'});
-		containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
+		new Setting(containerEl).setName('Status').setHeading();
+		new Setting(containerEl).setDesc(`Last sync: ${this.plugin.formatLastSyncTime()}`);
+		//containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
 
 		// 初始化帮助链接
 		setTimeout(() => {

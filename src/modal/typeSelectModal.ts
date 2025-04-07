@@ -1,5 +1,4 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
-import { ModalStyleManager } from './modalStyles';
 
 export const ALL_CONTENT_TYPES = [
     'Article',
@@ -40,9 +39,9 @@ export class TypeSelectModal extends Modal {
         contentEl.empty();
         
         contentEl.createEl('h2', { text: 'Manage Cubox content types to be synced' });
-        contentEl.addClass('cubox-type-select-modal');
+        contentEl.addClass('cubox-modal');
         
-        this.listEl = contentEl.createDiv({ cls: 'type-list-container' });
+        this.listEl = contentEl.createDiv({ cls: 'type-list-container cubox-list-container' });
         this.footerEl = contentEl.createDiv({ cls: 'modal-footer' });
         
         // 创建类型列表
@@ -65,27 +64,6 @@ export class TypeSelectModal extends Modal {
             this.onSave(selectedTypes);
             this.close();
         });
-        
-        this.addStyles();
-    }
-
-    private addStyles() {
-        ModalStyleManager.addModalStyles(
-            'cubox-modal-styles',
-            'cubox-type-select-modal',
-            'type-list-container'
-        );
-        
-        // 添加额外的样式，覆盖第一行字体加粗的样式
-        const styleEl = document.createElement('style');
-        styleEl.id = 'cubox-type-modal-additional-styles';
-        styleEl.textContent = `
-            /* 覆盖第一行字体加粗的样式 */
-            .type-list-container .setting-item:first-child .setting-item-name {
-                font-weight: normal;
-            }
-        `;
-        document.head.appendChild(styleEl);
     }
 
     private createTypeList() {
@@ -125,10 +103,5 @@ export class TypeSelectModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
-        
-        ModalStyleManager.removeModalStyles('cubox-modal-styles');
-        
-        const additionalStyleEl = document.getElementById('cubox-type-modal-additional-styles');
-        if (additionalStyleEl) additionalStyleEl.remove();
     }
 } 
