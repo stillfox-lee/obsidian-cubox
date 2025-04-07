@@ -25,9 +25,6 @@ export class TagSelectModal extends Modal {
             initialSelectedTags.forEach(id => {
                 this.selectedTags.add(id);
             });
-        } else {
-            // 如果没有初始选择，默认选中"All Items"
-            this.selectedTags.add(ALL_ITEMS);
         }
         
         this.onConfirm = onConfirm;

@@ -26,11 +26,6 @@ export class TypeSelectModal extends Modal {
             initialSelected.forEach(id => {
                 if (id) this.selectedTypes.add(id);
             });
-        } else {
-            // 如果没有初始选择，默认选中所有类型
-            ALL_CONTENT_TYPES.forEach(type => {
-                this.selectedTypes.add(type);
-            });
         }
     }
 

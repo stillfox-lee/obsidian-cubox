@@ -40,8 +40,6 @@ export class StatusSelectModal extends Modal {
             initialSelected.forEach(id => {
                 if (id) this.selectedStatuses.add(id);
             });
-        } else {
-            this.selectedStatuses.add(ALL_STATUS_ID);
         }
     }
 
@@ -128,10 +126,10 @@ export class StatusSelectModal extends Modal {
                 this.selectedStatuses.clear();
                 this.selectedStatuses.add(ALL_STATUS_ID);
                 
-                // 当选择 All 时，所有状态值设为 true
+                // 当选择 All 时，所有状态值设为 false
                 this.statuses.forEach(status => {
                     if (status.id !== 'all') {
-                        this.statusValues.set(status.id, true);
+                        this.statusValues.set(status.id, false);
                     }
                 });
             } else {
@@ -143,16 +141,10 @@ export class StatusSelectModal extends Modal {
                 // 如果选择了其他选项，移除"All Items"
                 this.selectedStatuses.delete(ALL_STATUS_ID);
                 this.selectedStatuses.add(statusId);
-                
-                this.statuses.forEach(status => {
-                    if (status.id !== 'all') {
-                        this.statusValues.set(status.id, status.id === statusId);
-                    }
-                });
             } else {
                 this.selectedStatuses.delete(statusId);
-                this.statusValues.set(statusId, false);
             }
+            this.statusValues.set(statusId, isSelected);
         }
     }
 

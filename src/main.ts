@@ -82,6 +82,12 @@ export default class CuboxSyncPlugin extends Plugin {
 			return;
 		}
 		
+		// Check if filters are configured
+		if (this.settings.folderFilter.length === 0 || this.settings.typeFilter.length === 0 || this.settings.statusFilter.length === 0 || this.settings.tagsFilter.length === 0)  {
+			new Notice('Please select the filter first');
+			return;
+		}
+		
 		try {
 			// 设置同步状态为进行中
 			this.settings.syncing = true;
@@ -221,7 +227,7 @@ export default class CuboxSyncPlugin extends Plugin {
 
 	formatLastSyncTime(): string {
 		if (!this.settings.lastSyncTime) {
-			return 'Never';
+			return 'never';
 		}
 		
 		return formatDateTime(new Date(this.settings.lastSyncTime).toISOString(), 'yyyy-MM-dd HH:mm');

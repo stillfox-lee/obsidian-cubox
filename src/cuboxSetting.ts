@@ -57,13 +57,13 @@ export interface CuboxSyncSettings {
 export const DEFAULT_SETTINGS: CuboxSyncSettings = {
 	domain: '', 
 	apiKey: '',
-	folderFilter: [ALL_FOLDERS_ID],
-	typeFilter: ALL_CONTENT_TYPES,
-	statusFilter: [ALL_STATUS_ID],
+	folderFilter: [],
+	typeFilter: [],
+	statusFilter: [],
 	isRead: true,
 	isStarred: true,
 	isAnnotated: true,
-	tagsFilter: [ALL_ITEMS],
+	tagsFilter: [],
 	syncFrequency: 30, // 分钟
 	targetFolder: 'Cubox',
 	filenameTemplate: '{{{title}}}-{{{create_time}}}',
@@ -474,7 +474,6 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 		// 状态部分
 		new Setting(containerEl).setName('Status').setHeading();
 		new Setting(containerEl).setDesc(`Last sync: ${this.plugin.formatLastSyncTime()}`);
-		//containerEl.createEl('p', {text: `Last sync: ${this.plugin.formatLastSyncTime()}`});
 
 		// 初始化帮助链接
 		setTimeout(() => {
@@ -570,7 +569,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getFolderFilterButtonText(): string {
 		const folderFilters = this.plugin.settings.folderFilter;
 		if (!folderFilters || folderFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (folderFilters.includes(ALL_FOLDERS_ID)) {
 			return 'All folders';
 		} else {
@@ -581,7 +580,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getTypeFilterButtonText(): string {
 		const typeFilters = this.plugin.settings.typeFilter;
 		if (!typeFilters || typeFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (typeFilters.length === ALL_CONTENT_TYPES.length) {
 			return 'All types';
 		} else {
@@ -592,7 +591,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getStatusFilterButtonText(): string {
 		const statusFilters = this.plugin.settings.statusFilter;
 		if (!statusFilters || statusFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (statusFilters.includes('all')) {
 			return 'All items';
 		} else {
@@ -603,7 +602,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 	private getTagFilterButtonText(): string {
 		const tagFilters = this.plugin.settings.tagsFilter;
 		if (!tagFilters || tagFilters.length === 0) {
-			return 'Manage';
+			return 'Select...';
 		} else if (tagFilters.includes(ALL_ITEMS)) {
 			return 'All items';
 		} else if (tagFilters.includes('')) {

@@ -24,9 +24,6 @@ export class FolderSelectModal extends Modal {
             initialSelectedFolders.forEach(id => {
                 if (id) this.selectedFolders.add(id);
             });
-        } else {
-            // 如果没有初始选择，默认选中"All Items"
-            this.selectedFolders.add(ALL_FOLDERS_ID);
         }
         
         this.onConfirm = onConfirm;
