@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { Notice, requestUrl } from 'obsidian';
 import { ALL_FOLDERS_ID } from './modal/folderSelectModal';
 import { ALL_ITEMS } from './modal/tagSelectModal';
 import { ALL_STATUS_ID } from './modal/statusSelectModal';
@@ -87,24 +87,31 @@ export class CuboxApi {
 
     private async request(path: string, options: RequestInit = {}) {
         const url = `${this.endpoint}${path}`;
-        const headers = {
+        const headers: Record<string, string> = {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
         };
 
-        const response = await fetch(url, {
-            ...options,
-            headers: {
-                ...headers,
-                ...options.headers,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.statusText}`);
+        if (options.headers) {
+            Object.entries(options.headers).forEach(([key, value]) => {
+                if (typeof value === 'string') {
+                    headers[key] = value;
+                }
+            });
         }
 
-        return response.json();
+        const response = await requestUrl({
+            url: url,
+            method: options.method || 'GET',
+            body: options.body as string | ArrayBuffer | undefined,
+            headers: headers,
+        });
+
+        if (response.status >= 400) {
+            throw new Error(`API request failed: ${response.status}`);
+        }
+
+        return JSON.parse(response.text);
     }
 
     /**
