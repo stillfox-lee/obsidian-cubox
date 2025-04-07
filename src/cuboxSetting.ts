@@ -6,6 +6,7 @@ import { filenameTemplateInstructions, metadataVariablesInstructions, contentTem
 import { ALL_CONTENT_TYPES, TypeSelectModal } from './modal/typeSelectModal';
 import { ALL_STATUS_ID, StatusSelectModal } from './modal/statusSelectModal';
 import { ALL_ITEMS, TagSelectModal } from './modal/tagSelectModal';
+import { normalizePath } from 'obsidian';
 
 export const DEFAULT_CONTENT_TEMPLATE = `# {{{title}}}
 
@@ -357,7 +358,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.targetFolder)
 				.onChange(async (value) => {
 					this.plugin.settings.lastSyncCardId = null;
-					this.plugin.settings.targetFolder = value;
+					this.plugin.settings.targetFolder = normalizePath(value);
 					await this.plugin.saveSettings();
 				}));
 
