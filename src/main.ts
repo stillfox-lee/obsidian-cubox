@@ -1,4 +1,4 @@
-import { addIcon, Notice, Plugin, TFile } from 'obsidian';
+import { addIcon, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { CuboxApi } from './cuboxApi';
 import { TemplateProcessor } from './templateProcessor';
 import { formatDateTime } from './utils';
@@ -50,10 +50,6 @@ export default class CuboxSyncPlugin extends Plugin {
 		if (this.syncIntervalId) {
 			window.clearInterval(this.syncIntervalId);
 		}
-
-		// 移除样式
-		const styleEl = document.getElementById('cubox-sync-styles');
-		if (styleEl) styleEl.remove();
 	}
 
 	async loadSettings() {
@@ -178,7 +174,7 @@ export default class CuboxSyncPlugin extends Plugin {
 						}
 						finalContent += contentTemplate;
 						
-						await this.app.vault.adapter.write(filePath, finalContent);
+						await this.app.vault.create(filePath, finalContent);
 						
 						syncCount++;
 					
@@ -216,9 +212,10 @@ export default class CuboxSyncPlugin extends Plugin {
 	}
 
 	async ensureTargetFolder() {
-		const folderPath = this.settings.targetFolder;
-		if (!(await this.app.vault.adapter.exists(folderPath))) {
-			await this.app.vault.createFolder(folderPath);
+		const folderName = this.settings.targetFolder;
+		const cuboxFolder = this.app.vault.getAbstractFileByPath(folderName)
+		if (!(cuboxFolder instanceof TFolder)) {
+			await this.app.vault.createFolder(folderName)
 		}
 	}
 
