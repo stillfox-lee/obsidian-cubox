@@ -145,11 +145,11 @@ export default class CuboxSyncPlugin extends Plugin {
 						const file = this.app.vault.getAbstractFileByPath(filePath);
 						if (file instanceof TFile) {
 							let foundMatchingId = false
-							await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-								if (frontmatter.id && frontmatter.id === article.id) {
-									foundMatchingId = true;
-								}
-							});
+							const itemId = this.app.metadataCache.getFileCache(file)?.frontmatter?.id
+							if (itemId && itemId === article.id) {	
+								foundMatchingId = true;
+								console.log('found matching id', itemId, article.id);
+							}
 
 							if (foundMatchingId) {
 								skipCount++;
