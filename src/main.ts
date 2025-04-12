@@ -154,7 +154,6 @@ export default class CuboxSyncPlugin extends Plugin {
 							const itemId = this.app.metadataCache.getFileCache(file)?.frontmatter?.id
 							if (itemId && itemId === article.id) {	
 								foundMatchingId = true;
-								console.log('found matching id', itemId, article.id);
 							}
 
 							if (foundMatchingId) {

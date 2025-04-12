@@ -91,9 +91,6 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 		
-		// 连接设置部分
-		new Setting(containerEl).setName('Connect obsidian to your Cubox').setHeading();
-
 		// 修改域名选择下拉框
 		new Setting(containerEl)
 			.setName('Cubox server domain')
@@ -505,7 +502,7 @@ export class CuboxSyncSettingTab extends PluginSettingTab {
 			
 			descEl.appendChild(
 				createEl('a', {
-					text: 'Extension Settings',
+					text: 'Extension settings',
 					href: url,
 					attr: {
 						target: '_blank',
