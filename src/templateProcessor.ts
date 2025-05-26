@@ -128,6 +128,16 @@ export class TemplateProcessor {
               frontMatter[alias] = article.tags;
               continue;
             }
+
+            if (variable === 'create_time' && article.create_time) {
+              frontMatter[alias] = formatDateTime(article.create_time, this.dateFormat);
+              continue;
+            }
+
+            if (variable === 'update_time' && article.update_time) {
+              frontMatter[alias] = formatDateTime(article.update_time, this.dateFormat);
+              continue;
+            }
       
             const value = this.getArticleProperty(article, variable);
             if (value) {
@@ -185,8 +195,8 @@ export class TemplateProcessor {
             highlights: [],
             tags: article.tags || [],
             highlights_length: article.highlights?.length || 0,
-            formatted_create_time: article.create_time ? formatDateTime(article.create_time, this.dateFormat) : '',
-            formatted_update_time: article.update_time ? formatDateTime(article.update_time, this.dateFormat) : ''
+            create_time: article.create_time ? formatDateTime(article.create_time, this.dateFormat) : '',
+            update_time: article.update_time ? formatDateTime(article.update_time, this.dateFormat) : ''
         };
 
         // 处理高亮内容
@@ -238,7 +248,7 @@ export class TemplateProcessor {
             ...highlight,
             text: text,
             note: note,
-            formatted_create_time: highlight.create_time ? formatDateTime(highlight.create_time, this.dateFormat) : ''
+            create_time: highlight.create_time ? formatDateTime(highlight.create_time, this.dateFormat) : '',
         };
         
         // 确保所有必要的字段都存在
